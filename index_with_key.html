@@ -268,6 +268,14 @@ textarea.inp{resize:vertical;min-height:50px}
 .ts{background:var(--green)}.te{background:var(--red)}.ti{background:var(--a2)}
 @keyframes tin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bd2);border-top-color:var(--accent);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
+.lang-opt{background:var(--bg4);border:2px solid var(--bd2);border-radius:var(--r);padding:.8rem;cursor:pointer;transition:.2s;text-align:center;color:var(--tx2);font-family:var(--fb)}
+.lang-opt:hover{border-color:var(--accent);color:var(--tx)}
+.lang-opt.on{border-color:var(--accent);background:rgba(0,229,255,.1);color:var(--tx)}
+.pyout{background:#0d1117;border-radius:var(--r);padding:.7rem .9rem;font-family:var(--fm);font-size:.78rem;line-height:1.6;min-height:60px;max-height:200px;overflow-y:auto;margin-top:.5rem;white-space:pre-wrap;word-break:break-all}
+.pyout .py-out{color:#a8ff78}.pyout .py-err{color:var(--red)}.pyout .py-in{color:var(--accent3)}
+.db-panel{background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);padding:.7rem .9rem;margin-top:.5rem}
+.db-row{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--bd);font-size:.78rem}.db-row:last-child{border-bottom:none}
+.db-key{color:var(--accent);font-family:var(--fm);min-width:120px}.db-val{color:var(--tx2);flex:1;font-family:var(--fm)}
 @keyframes sp{to{transform:rotate(360deg)}}
 .typing{color:var(--tx3);font-size:.75rem;font-style:italic;padding:.2rem .5rem}
 
@@ -291,21 +299,16 @@ textarea.inp{resize:vertical;min-height:50px}
   <div class="awrap">
     <div class="logo"><div class="logo-i">⬡</div><div class="logo-t">GAMEFORGE</div><div class="logo-s">BUILD · SHARE · PLAY</div></div>
     <div class="acard">
-      <button class="btng" id="btn-gl" onclick="authGoogle()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Googleアカウントでログイン
-      </button>
-      <div class="div">または</div>
+
       <div class="atabs"><button class="atab on" onclick="swATab('li')">ログイン</button><button class="atab" onclick="swATab('re')">新規登録</button></div>
       <div id="af-li" class="aform on">
-        <div class="fg"><label>メールアドレス</label><input class="inp" type="email" id="li-e" placeholder="email@example.com"></div>
+        <div class="fg"><label>ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username" autocomplete="off"></div>
         <div class="fg"><label>パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>
         <div class="ferr" id="li-err"></div>
         <button class="btnp" id="btn-li" onclick="authLogin()">ログイン</button>
-        <span class="alink" onclick="authForgot()">パスワードを忘れた方</span>
+
       </div>
       <div id="af-re" class="aform">
-        <div class="fg"><label>メールアドレス</label><input class="inp" type="email" id="re-e" placeholder="email@example.com"></div>
         <div class="fg"><label>パスワード（6文字以上）</label><input class="inp" type="password" id="re-p" placeholder="••••••••"></div>
         <div class="fg"><label>表示名（日本語OK）</label><input class="inp" type="text" id="re-n" placeholder="あなたの名前"></div>
         <div class="fg"><label>ユーザー名（英数字）</label><input class="inp" type="text" id="re-u" placeholder="username" autocomplete="off"></div>
@@ -472,10 +475,32 @@ textarea.inp{resize:vertical;min-height:50px}
 </div><!-- /app -->
 
 <!-- MODALS -->
-<div class="mov" id="m-create"><div class="modal"><div class="mtitle">✨ 新規ゲーム作成</div>
+<div class="mov" id="m-create"><div class="modal"><div class="mtitle">✨ 新規プロジェクト作成</div>
   <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
   <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
   <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
+  <div class="fg"><label>言語・モードを選択</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
+      <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🌐</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
+      </button>
+      <button class="lang-opt" data-lang="python" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🐍</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
+      <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
+        <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
+      </label>
+    </div>
+    <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
+      ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
+    </div>
+  </div>
   <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
 </div></div>
 
@@ -515,6 +540,7 @@ textarea.inp{resize:vertical;min-height:50px}
 
 <div id="toasts"></div>
 
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
@@ -559,6 +585,11 @@ document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e
 // ── Nav ──────────────────────────────────────
 function go(page, data=null) {
   if(page !== curPage) pageStack.push(curPage);
+  // エディタ離れたらDBパネル・DBウォッチャー削除
+  if(curPage==='editor'&&page!=='editor'){
+    const p=document.getElementById('db-live-panel');if(p)p.remove();
+    if(dbWatcher){sb.removeChannel(dbWatcher);dbWatcher=null;}
+  }
   curPage = page;
   document.querySelectorAll('.pg').forEach(p => { p.classList.toggle('on', p.id===`p-${page}`); p.style.display=''; });
   document.querySelectorAll('.ni').forEach(n => n.classList.toggle('on', n.dataset.p===page));
@@ -585,6 +616,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.avo').forEach(x=>x.classList.remove('on')); o.classList.add('on');
   });
   $('li-p').addEventListener('keydown', e => e.key==='Enter' && authLogin());
+  $('li-u').addEventListener('keydown', e => e.key==='Enter' && $('li-p').focus());
   $('re-p').addEventListener('keydown', e => e.key==='Enter' && authRegister());
 
   // Auth state
@@ -635,49 +667,46 @@ function swATab(t) {
   $('af-re').classList.toggle('on',t==='re');
 }
 
-async function authGoogle() {
-  const b=$('btn-gl'); b.disabled=true; b.textContent='...';
-  const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.href } });
-  if (error) toast(error.message,'e');
-  b.disabled=false; b.innerHTML='<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Googleアカウントでログイン';
-}
+// Google認証は無効化
 
 async function authLogin() {
-  const email=$('li-e').value.trim(), pw=$('li-p').value;
+  const uname=$('li-u').value.trim(), pw=$('li-p').value;
   const err=$('li-err'); err.textContent='';
-  if(!email||!pw){err.textContent='入力してください';return;}
+  if(!uname||!pw){err.textContent='入力してください';return;}
   const b=$('btn-li'); b.disabled=true; b.textContent='...';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if (error) err.textContent = error.message;
+  // ユーザー名からメールを取得してログイン
+  const { data: prof } = await sb.from('profiles').select('id').eq('username',uname).single();
+  if(!prof){err.textContent='ユーザーが見つかりません';b.disabled=false;b.textContent='ログイン';return;}
+  // ダミーメールでログイン
+  const dummyEmail = uname + '@gameforge.local';
+  const { error } = await sb.auth.signInWithPassword({ email: dummyEmail, password: pw });
+  if (error) err.textContent = 'ユーザー名またはパスワードが違います';
   b.disabled=false; b.textContent='ログイン';
 }
 
 async function authRegister() {
-  const email=$('re-e').value.trim(), pw=$('re-p').value, name=$('re-n').value.trim(), uname=$('re-u').value.trim();
+  const pw=$('re-p').value, name=$('re-n').value.trim(), uname=$('re-u').value.trim();
   const av=document.querySelector('.avo.on')?.dataset.v||'🎮';
   const err=$('re-err'); err.textContent='';
-  if(!email||!pw||!name||!uname){err.textContent='全項目を入力してください';return;}
+  if(!pw||!name||!uname){err.textContent='全項目を入力してください';return;}
   if(uname.length<2){err.textContent='ユーザー名は2文字以上';return;}
+  if(pw.length<6){err.textContent='パスワードは6文字以上';return;}
   // ユーザー名重複チェック
   const { data: ex } = await sb.from('profiles').select('id').eq('username',uname).single();
   if(ex){err.textContent='このユーザー名は既に使われています';return;}
   const b=$('btn-re'); b.disabled=true; b.textContent='...';
-  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  // ユーザー名をダミーメールに変換してSupabase Authに登録
+  const dummyEmail = uname + '@gameforge.local';
+  const { data, error } = await sb.auth.signUp({ email: dummyEmail, password: pw });
   if(error){err.textContent=error.message;b.disabled=false;b.textContent='アカウント作成';return;}
   if(data.user) {
     await sb.from('profiles').insert({ id:data.user.id, username:uname, display_name:name, avatar:av });
+    toast('アカウントを作成しました！','s');
   }
   b.disabled=false; b.textContent='アカウント作成';
-  toast('確認メールを送信しました。メールを確認してログインしてください。','i');
 }
 
-async function authForgot() {
-  const email = prompt('パスワードリセット用のメールアドレスを入力してください:');
-  if(!email) return;
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href });
-  if(error) toast(error.message,'e');
-  else toast('リセットメールを送信しました！','s');
-}
+// パスワードリセットは無効化
 
 async function authLogout() {
   if(dmSub) sb.removeChannel(dmSub);
@@ -824,29 +853,163 @@ async function loadMG(){
 //  CREATE / EDITOR
 // ════════════════════════════════════════════
 function openCM(){$('nc-t').value='';$('nc-d').value='';$('nc-h').value='';openM('m-create');}
+function selLang(el){document.querySelectorAll('.lang-opt').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
+document.addEventListener('DOMContentLoaded',()=>{const cb=document.getElementById('nc-db');if(cb)cb.addEventListener('change',()=>{const d=document.getElementById('db-desc');if(d)d.style.display=cb.checked?'':'none';});});
+
 async function handleCreate(){
-  const title=$('nc-t').value.trim()||'無題のゲーム';
+  const title=$('nc-t').value.trim()||'無題のプロジェクト';
+  const lang=document.querySelector('.lang-opt.on')?.dataset.lang||'html';
+  const useDb=$('nc-db')?.checked||false;
   const id='g_'+uid();
+  let html='',css='',js='';
+  if(lang==='html'){
+    html='<div id="game">\n  <h1>🎮 My Game</h1>\n  <p>ゲームをここに作ろう！</p>\n  <button onclick="start()">スタート</button>\n</div>';
+    css='body{margin:0;background:#0f0f1a;color:#e0e0ff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}\n#game{text-align:center;padding:2rem}\nbutton{padding:.8rem 2rem;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer}';
+    js=useDb?`// GF リアルタイムDBの使い方:\n// await GF.set('score', 100);  // 保存\n// const v = await GF.get('score');  // 取得\n// GF.watch('score', v => console.log(v));  // リアルタイム監視\n\nfunction start(){\n  alert("ゲームスタート！");\n}`:`function start(){\n  alert("ゲームスタート！");\n}`;
+  } else {
+    html='';css='';
+    js=useDb?`# GF リアルタイムDBの使い方:\n# await GF.set('score', 100)\n# value = await GF.get('score')\n\nprint("Hello, GAMEFORGE!")\nprint("Pythonが動いています！")`:`print("Hello, GAMEFORGE!")\nprint("Pythonが動いています！")`;
+  }
   const { error } = await sb.from('games').insert({
     id,title,description:$('nc-d').value,how_to_play:$('nc-h').value,
     author_id:ME.id,author_name:ME.display_name,author_avatar:ME.avatar||'🎮',
-    html:'<div id="game">\n  <h1>🎮 My Game</h1>\n  <p>ゲームをここに作ろう！</p>\n  <button onclick="start()">スタート</button>\n</div>',
-    css:'body{margin:0;background:#0f0f1a;color:#e0e0ff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}\n#game{text-align:center;padding:2rem}\nbutton{padding:.8rem 2rem;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer}',
-    js:'function start(){\n  alert("ゲームスタート！");\n}'
+    html,css,js,lang,use_db:useDb
   });
   if(error){toast(error.message,'e');return;}
-  closeM('m-create');toast('ゲームを作成しました！','s');go('editor',id);
+  closeM('m-create');toast('プロジェクトを作成しました！','s');go('editor',id);
 }
+
+let currentLang='html', currentUseDb=false;
+let pyodideReady=false, pyodideLoading=false, pyodideInstance=null;
 
 async function openEditor(gid){
   edGID=gid;
   const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
   if(!g){toast('ゲームが見つかりません','e');return;}
+  currentLang=g.lang||'html'; currentUseDb=g.use_db||false;
   $('ed-t').value=g.title;$('ed-d').value=g.description||'';$('ed-h').value=g.how_to_play||'';
   $('ed-vi').textContent=g.is_published?`公開: v${g.published_version}`:'未公開';
-  edFiles={html:{name:'index.html',mode:'htmlmixed',content:g.html||''},css:{name:'style.css',mode:'css',content:g.css||''},js:{name:'script.js',mode:'javascript',content:g.js||''}};
-  const files=g.files||{};Object.entries(files).forEach(([k,v])=>edFiles[k]=v);
-  renderTabs();switchTab('html');renderVH(g.versions||[]);setSst('s');refreshPV();
+
+  if(currentLang==='python'){
+    setupPythonEditor(g);
+  } else {
+    edFiles={html:{name:'index.html',mode:'htmlmixed',content:g.html||''},css:{name:'style.css',mode:'css',content:g.css||''},js:{name:'script.js',mode:'javascript',content:g.js||''}};
+    const files=g.files||{};Object.entries(files).forEach(([k,v])=>edFiles[k]=v);
+    renderTabs();switchTab('html');renderVH(g.versions||[]);setSst('s');refreshPV();
+  }
+  if(currentUseDb) setupDbPanel(gid);
+}
+
+function setupPythonEditor(g){
+  // Python用: タブはmain.pyのみ
+  edFiles={py:{name:'main.py',mode:'python',content:g.js||'print("Hello!")'} };
+  // CSSモードを追加
+  if(!CodeMirror.modes.python){
+    // pythonモードがなければjavascriptで代用（構文ハイライト近似）
+  }
+  renderTabs();switchTab('py');
+  // プレビューをPython実行エリアに切り替え
+  $('pv-frame').style.display='none';
+  let pvwrap=$('pv-frame').parentElement;
+  if(!document.getElementById('py-area')){
+    pvwrap.innerHTML=`
+      <div style="display:flex;flex-direction:column;height:100%;background:var(--bg2)">
+        <div style="padding:.5rem .8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+          <span style="font-size:.73rem;font-weight:700;color:var(--tx2);font-family:var(--fm)">🐍 Python出力</span>
+          <button class="bs ba" id="btn-run-py" onclick="runPython()" style="margin-left:auto">▶ 実行</button>
+          <button class="bs bg" onclick="clearPyOut()" style="font-size:.7rem">クリア</button>
+          <span id="py-status" style="font-size:.7rem;color:var(--tx3)"></span>
+        </div>
+        <div class="pyout" id="py-out" style="flex:1;margin:0;border-radius:0"><span style="color:var(--tx3)">▶ 実行 ボタンを押すとPythonが動きます</span></div>
+        ${currentUseDb?'<div id="db-panel-py" style="flex-shrink:0"></div>':''}
+      </div>`;
+  }
+}
+
+async function runPython(){
+  const btn=$('btn-run-py');const status=$('py-status');const out=$('py-out');
+  if(!btn||!out)return;
+  btn.disabled=true;
+  if(!pyodideReady){
+    status.textContent='Pyodide読み込み中...（初回のみ時間がかかります）';
+    out.innerHTML='<span style="color:var(--accent3)">🐍 Pythonエンジンを起動中...</span>';
+    if(!pyodideLoading){
+      pyodideLoading=true;
+      try{
+        pyodideInstance=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'});
+        pyodideReady=true;status.textContent='✅ 準備完了';
+      }catch(e){out.innerHTML=`<span class="py-err">Pyodide読み込みエラー: ${e.message}</span>`;btn.disabled=false;return;}
+    }
+  }
+  const code=editors['py']?editors['py'].getValue():(edFiles.py?.content||'');
+  out.innerHTML='';
+  const logs=[];
+  pyodideInstance.globals.set('print_capture',(txt)=>logs.push(txt));
+  try{
+    // printをキャプチャ
+    await pyodideInstance.runPythonAsync(`
+import sys
+from io import StringIO
+_buf=StringIO()
+sys.stdout=_buf
+sys.stderr=_buf
+`);
+    if(currentUseDb){
+      // GF DB APIをPythonに注入
+      await pyodideInstance.runPythonAsync(`
+from pyodide.ffi import to_js
+import js
+class _GF:
+    async def set(self,k,v):
+        await js.GF_set(k,str(v))
+    async def get(self,k):
+        return await js.GF_get(k)
+GF=_GF()
+`);
+    }
+    await pyodideInstance.runPythonAsync(code);
+    const result=await pyodideInstance.runPythonAsync('_buf.getvalue()');
+    const lines=(result||'').split('\n');
+    out.innerHTML=lines.map(l=>`<span class="py-out">${esc(l)}</span>`).join('\n')||'<span style="color:var(--tx3)">(出力なし)</span>';
+  }catch(e){
+    const errText=String(e).replace(/Error: /,'');
+    out.innerHTML+=`<span class="py-err">\n❌ ${esc(errText)}</span>`;
+  }
+  status.textContent='';btn.disabled=false;
+}
+function clearPyOut(){const o=$('py-out');if(o)o.innerHTML='';}
+
+// ── DB パネル ─────────────────────────────────────────────────
+let dbWatcher=null;
+async function setupDbPanel(gid){
+  // DBパネルをエディタ下部またはプレビュー下に表示
+  const existingPanel=document.getElementById('db-live-panel');
+  if(existingPanel)existingPanel.remove();
+  const panel=document.createElement('div');
+  panel.id='db-live-panel';panel.className='db-panel';
+  panel.style.cssText='position:fixed;bottom:1rem;right:1rem;width:280px;z-index:50;max-height:200px;overflow-y:auto';
+  panel.innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem"><span style="font-size:.78rem;font-weight:700;color:var(--accent)">🗄️ リアルタイムDB</span><button class="bs bg" onclick="this.closest('#db-live-panel').remove()" style="font-size:.65rem;margin-left:auto">✕</button></div><div id="db-rows"><span style="font-size:.75rem;color:var(--tx3)">データなし</span></div>`;
+  document.body.appendChild(panel);
+  // リアルタイム購読
+  if(dbWatcher)sb.removeChannel(dbWatcher);
+  loadDbData(gid);
+  dbWatcher=sb.channel('db-'+gid).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`game_id=eq.${gid}`},()=>loadDbData(gid)).subscribe();
+  // JS/Python用グローバルAPI注入
+  window.GF={
+    set:async(k,v)=>{await sb.from('game_db').upsert({game_id:gid,key:k,value:String(v)},{onConflict:'game_id,key'});return v;},
+    get:async(k)=>{const {data}=await sb.from('game_db').select('value').eq('game_id',gid).eq('key',k).single();return data?.value??null;},
+    watch:(k,cb)=>{sb.channel('gfdb-'+k).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`key=eq.${k}`},p=>cb(p.new?.value)).subscribe();},
+    delete:async(k)=>{await sb.from('game_db').delete().eq('game_id',gid).eq('key',k);}
+  };
+  // iframeにGFを橋渡し
+  window.GF_set=async(k,v)=>window.GF.set(k,v);
+  window.GF_get=async(k)=>window.GF.get(k);
+}
+async function loadDbData(gid){
+  const {data}=await sb.from('game_db').select('key,value').eq('game_id',gid).order('key');
+  const rows=$('db-rows');if(!rows)return;
+  if(!data?.length){rows.innerHTML='<span style="font-size:.75rem;color:var(--tx3)">データなし</span>';return;}
+  rows.innerHTML=data.map(r=>`<div class="db-row"><span class="db-key">${esc(r.key)}</span><span class="db-val">${esc(r.value)}</span><button onclick="GF.delete('${esc(r.key)}').then(()=>loadDbData('${gid}'))" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:.7rem">✕</button></div>`).join('');
 }
 
 function renderTabs(){
@@ -881,10 +1044,21 @@ function checkErrors(){
   ov.classList.toggle('hide',!errs.length);el.innerHTML=errs.map(e=>`<div class="erl">${esc(e)}</div>`).join('');
 }
 function refreshPV(){
+  if(currentLang==='python') return; // Pythonは別途runPythonで実行
   if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
   const h=edFiles.html?.content||'',c=edFiles.css?.content||'',j=edFiles.js?.content||'';
   let ex='';Object.entries(edFiles).forEach(([k,f])=>{if(['html','css','js'].includes(k))return;if(f.mode==='css')ex+=`<style>${f.content}</style>`;else if(f.mode==='javascript')ex+=`<script>${f.content}<\/script>`;else ex+=f.content;});
-  $('pv-frame').srcdoc=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${c}</style></head><body>${h}${ex}<script>window.onerror=function(m,s,l){window.parent.postMessage({type:'gf-e',msg:m,line:l},'*');};${j}<\/script></body></html>`;
+  // GFのDB橋渡し
+  const gfBridge=currentUseDb&&edGID?`<script>
+    const _sb=window.parent.GF;
+    window.GF={
+      set:(k,v)=>window.parent.GF.set(k,v),
+      get:(k)=>window.parent.GF.get(k),
+      watch:(k,cb)=>window.parent.GF.watch(k,cb),
+      delete:(k)=>window.parent.GF.delete(k)
+    };
+  <\/script>`:'';
+  $('pv-frame').srcdoc=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${c}</style></head><body>${h}${ex}${gfBridge}<script>window.onerror=function(m,s,l){window.parent.postMessage({type:'gf-e',msg:m,line:l},'*');};${j}<\/script></body></html>`;
 }
 window.addEventListener('message',e=>{if(e.data?.type==='gf-e'){const ov=$('erov'),el=$('erl');ov.classList.remove('hide');const d=document.createElement('div');d.className='erl';d.textContent=`⚠ L${e.data.line}: ${e.data.msg}`;el.appendChild(d);}});
 function schedSave(){setSst('w');refreshPV();clearTimeout(saveTimer);saveTimer=setTimeout(doSave,1200);}
@@ -892,8 +1066,14 @@ function setSst(s){const el=$('sst');el.className='sst '+s;el.textContent=s==='s
 async function doSave(){
   if(!edGID)return;
   if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
-  const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
-  const { error } = await sb.from('games').update({html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,title:$('ed-t').value,description:$('ed-d').value,how_to_play:$('ed-h').value,files:ex,updated_at:new Date().toISOString()}).eq('id',edGID);
+  let updateData={title:$('ed-t').value,description:$('ed-d').value,how_to_play:$('ed-h').value,updated_at:new Date().toISOString()};
+  if(currentLang==='python'){
+    updateData.js=edFiles.py?.content||'';
+  } else {
+    const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
+    updateData={...updateData,html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,files:ex};
+  }
+  const { error } = await sb.from('games').update(updateData).eq('id',edGID);
   setSst(error?'e':'s');
 }
 async function handleDeploy(){await doSave();const { data: g } = await sb.from('games').select('current_version').eq('id',edGID).single();$('dep-i').textContent=`現在: v${g?.current_version||0} → v${(g?.current_version||0)+1} として公開`;openM('m-deploy');}
