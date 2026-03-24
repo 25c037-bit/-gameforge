@@ -669,7 +669,7 @@ async function initUser(user) {
 }
 
 function applyUser() {
-  $('sb-av').textContent = ME.avatar||'🎮';
+  if(ME.avatar&&ME.avatar.startsWith('http')){$('sb-av').innerHTML=`<img src="${ME.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;}else{$('sb-av').textContent=ME.avatar||'🎮';}
   $('sb-n').textContent = ME.display_name;
   $('sb-r').textContent = ME.role==='admin'?'⚡ Admin':'Player';
   if (ME.role==='admin') $('ni-adm').style.display='';
@@ -706,16 +706,15 @@ async function authRegister() {
   if(!pw||!name||!uname){err.textContent='全項目を入力してください';return;}
   if(uname.length<2){err.textContent='ユーザー名は2文字以上';return;}
   if(pw.length<6){err.textContent='パスワードは6文字以上';return;}
-  // ユーザー名重複チェック
   const { data: ex } = await sb.from('profiles').select('id').eq('username',uname).single();
   if(ex){err.textContent='このユーザー名は既に使われています';return;}
   const b=$('btn-re'); b.disabled=true; b.textContent='...';
-  // ユーザー名をダミーメールに変換してSupabase Authに登録
-  const dummyEmail = uname + '@gameforge.local';
-  const { data, error } = await sb.auth.signUp({ email: dummyEmail, password: pw });
+  // メールを完全に隠蔽 - ランダムUUID使用
+  const hiddenEmail = 'u' + crypto.randomUUID().replace(/-/g,'') + '@ds.app';
+  const { data, error } = await sb.auth.signUp({ email: hiddenEmail, password: pw });
   if(error){err.textContent=error.message;b.disabled=false;b.textContent='アカウント作成';return;}
   if(data.user) {
-    await sb.from('profiles').insert({ id:data.user.id, username:uname, display_name:name, avatar:av });
+    await sb.from('profiles').insert({ id:data.user.id, username:uname, display_name:name, avatar:av, auth_email:hiddenEmail });
     saveAccount(uname, name, av, hiddenEmail, pw);
     toast('アカウントを作成しました！','s');
   }
@@ -827,7 +826,8 @@ const EMOJIS=['👍','❤️','🔥','⭐','😂','😮'];
 function mkCard(g){
   const el=document.createElement('div'); el.className='card'; el.dataset.id=g.id;
   const rH=EMOJIS.map(e=>`<button class="rbtn" id="rc-${g.id}-${e.codePointAt(0)}" onclick="doReact('${g.id}','${e}')">${e} <span>0</span></button>`).join('');
-  el.innerHTML=`<div class="cthumb" onclick="go('play','${g.id}')">${g.author_avatar||'🎮'}</div>
+  const avHtml=g.author_avatar&&g.author_avatar.startsWith('http')?`<img src="${g.author_avatar}" style="width:100%;height:100%;object-fit:cover">`:g.author_avatar||'🎮';
+  el.innerHTML=`<div class="cthumb" onclick="go('play','${g.id}')" style="${g.author_avatar&&g.author_avatar.startsWith('http')?'padding:0;overflow:hidden':''}">${avHtml}</div>
     <div class="cbody" onclick="go('play','${g.id}')">
       <div class="ctitle">${esc(g.title)}</div>
       <div class="cdesc">${esc(g.description||'')}</div>
@@ -1245,7 +1245,7 @@ async function showProfile(uid2){
   const rqBtn=!isSelf&&u.request_mode?`<button class="bs ba" onclick="openRqModal('${uid2}','${esc(u.display_name)}')">📩 リクエスト</button>`:'';
   const adminBtn=ME?.role==='admin'&&!isSelf?`<button class="bs bg" onclick="openWarnModal('${uid2}')" style="font-size:.7rem">⚠ 警告</button>`:'';
   $('prf-h').innerHTML=`<div class="prfhd">
-    <div class="prfav">${u.avatar||'🎮'}</div>
+    <div class="prfav">${u.avatar&&u.avatar.startsWith('http')?`<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:13px">`:u.avatar||'🎮'}</div>
     <div style="flex:1">
       <div class="prfname">${esc(u.display_name)}${u.role==='admin'?' <span style="font-size:.7rem;color:var(--accent)">⚡</span>':''}</div>
       <div class="prfun">@${esc(u.username)}</div>
@@ -1388,7 +1388,17 @@ function loadSettings(){
     <div class="ssec"><div class="stitle">👤 プロフィール編集</div>
       <div class="fg"><label class="mlbl">表示名</label><input class="inp" type="text" id="sn" value="${esc(u.display_name)}"></div>
       <div class="fg"><label class="mlbl">自己紹介</label><textarea class="inp" id="sb-bio" rows="2">${esc(u.bio||'')}</textarea></div>
-      <div class="fg"><label class="mlbl">アバター</label><div class="avs" id="set-av">${['🎮','🚀','⭐','🐱','🦊','🐲','👾','🤖','🔥','💎'].map(a=>`<div class="avo${u.avatar===a?' on':''}" data-v="${a}" onclick="selAv(this)">${a}</div>`).join('')}</div></div>
+      <div class="fg"><label class="mlbl">アバター</label>
+        <div class="avs" id="set-av">${['🎮','🚀','⭐','🐱','🦊','🐲','👾','🤖','🔥','💎'].map(a=>`<div class="avo${u.avatar===a?' on':''}" data-v="${a}" onclick="selAv(this)">${a}</div>`).join('')}</div>
+        <div style="margin-top:.6rem;display:flex;align-items:center;gap:.6rem">
+          <label style="font-size:.75rem;color:var(--tx2)">または画像をアップロード:</label>
+          <input type="file" id="av-file" accept="image/*" style="font-size:.75rem;color:var(--tx2)" onchange="previewAvatar(this)">
+        </div>
+        <div id="av-preview" style="margin-top:.5rem;display:none">
+          <img id="av-img" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
+          <span style="font-size:.72rem;color:var(--green);margin-left:.5rem">✅ 画像選択済み</span>
+        </div>
+      </div>
       <button class="bs ba" onclick="saveProf()">保存</button>
     </div>
     <div class="ssec"><div class="stitle">📩 リクエスト設定</div>
@@ -1406,7 +1416,34 @@ function loadSettings(){
     </div>`;
 }
 function selAv(el){document.querySelectorAll('#set-av .avo').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
-async function saveProf(){const name=$('sn').value.trim(),bio=$('sb-bio').value,av=document.querySelector('#set-av .avo.on')?.dataset.v||ME.avatar;const { error } = await sb.from('profiles').update({display_name:name,bio,avatar:av}).eq('id',ME.id);if(error){toast(error.message,'e');return;}ME.display_name=name;ME.bio=bio;ME.avatar=av;applyUser();toast('保存しました','s');}
+function previewAvatar(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{$('av-img').src=e.target.result;$('av-preview').style.display='';};
+  reader.readAsDataURL(file);
+  // 絵文字選択を解除
+  document.querySelectorAll('#set-av .avo').forEach(o=>o.classList.remove('on'));
+}
+async function saveProf(){
+  const name=$('sn').value.trim(),bio=$('sb-bio').value;
+  let av=document.querySelector('#set-av .avo.on')?.dataset.v||ME.avatar;
+  const b=event.target;b.disabled=true;b.textContent='保存中...';
+  // 画像アップロード処理
+  const file=$('av-file')?.files[0];
+  if(file){
+    const ext=file.name.split('.').pop();
+    const path=`avatars/${ME.id}.${ext}`;
+    const {error:se}=await sb.storage.from('avatars').upload(path,file,{upsert:true,contentType:file.type});
+    if(!se){
+      const {data:url}=sb.storage.from('avatars').getPublicUrl(path);
+      av=url.publicUrl+'?t='+Date.now(); // キャッシュ防止
+    }
+  }
+  const {error}=await sb.from('profiles').update({display_name:name,bio,avatar:av}).eq('id',ME.id);
+  if(error){toast(error.message,'e');b.disabled=false;b.textContent='保存';return;}
+  ME.display_name=name;ME.bio=bio;ME.avatar=av;applyUser();toast('保存しました','s');
+  b.disabled=false;b.textContent='保存';
+}
 async function toggleRqMode(){ME.request_mode=!ME.request_mode;await sb.from('profiles').update({request_mode:ME.request_mode}).eq('id',ME.id);loadSettings();}
 async function saveRqMode(){const desc=$('rq-desc').value;await sb.from('profiles').update({request_mode:ME.request_mode,request_desc:desc}).eq('id',ME.id);ME.request_desc=desc;toast('設定を保存しました','s');}
 async function saveGH(){const gh=$('gh-u').value.trim();await sb.from('profiles').update({github_username:gh}).eq('id',ME.id);ME.github_username=gh;toast('GitHubを保存しました','s');loadSettings();}
