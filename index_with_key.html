@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>GAMEFORGE</title>
+<title>D·STUDIO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
@@ -278,6 +278,8 @@ textarea.inp{resize:vertical;min-height:50px}
 .db-key{color:var(--accent);font-family:var(--fm);min-width:120px}.db-val{color:var(--tx2);flex:1;font-family:var(--fm)}
 @keyframes sp{to{transform:rotate(360deg)}}
 .typing{color:var(--tx3);font-size:.75rem;font-style:italic;padding:.2rem .5rem}
+.sw-chip{display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;background:var(--bg4);border-radius:var(--r);cursor:pointer;margin-bottom:.35rem;transition:.15s;border:1px solid var(--bd2)}
+.sw-chip:hover{border-color:var(--accent)}.sw-chip.cur{border-color:var(--accent);background:rgba(0,229,255,.08)}
 
 @media(max-width:768px){
   .sb{width:48px;min-width:48px}
@@ -297,7 +299,7 @@ textarea.inp{resize:vertical;min-height:50px}
 <div id="s-auth" class="scr on">
   <div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>
   <div class="awrap">
-    <div class="logo"><div class="logo-i">⬡</div><div class="logo-t">GAMEFORGE</div><div class="logo-s">BUILD · SHARE · PLAY</div></div>
+    <div class="logo"><div class="logo-i">⬡</div><div class="logo-t">D·STUDIO</div><div class="logo-s">CODE · CREATE · SHARE</div></div>
     <div class="acard">
 
       <div class="atabs"><button class="atab on" onclick="swATab('li')">ログイン</button><button class="atab" onclick="swATab('re')">新規登録</button></div>
@@ -329,7 +331,7 @@ textarea.inp{resize:vertical;min-height:50px}
 <!-- MAIN -->
 <div id="s-main" class="scr">
   <nav class="sb">
-    <div class="sb-logo" onclick="go('timeline')"><div class="sb-logo-i">⬡</div><div class="sb-logo-t">GAMEFORGE</div></div>
+    <div class="sb-logo" onclick="go('timeline')"><div class="sb-logo-i">⬡</div><div class="sb-logo-t">D·STUDIO</div></div>
     <div class="sb-s"><input type="text" placeholder="検索..." id="sb-s" oninput="dbTL(this.value)"></div>
     <div class="sb-nav">
       <button class="ni on" data-p="timeline" onclick="go('timeline')"><span class="ni-i">🏠</span><span class="ni-l">タイムライン</span></button>
@@ -347,6 +349,8 @@ textarea.inp{resize:vertical;min-height:50px}
         <div class="uav" id="sb-av">🎮</div>
         <div style="flex:1;min-width:0"><div class="un" id="sb-n">-</div><div class="ur" id="sb-r">Player</div></div>
       </div>
+      <div id="saved-accounts" style="margin-top:.4rem"></div>
+      <button class="bs bg" onclick="openM('m-switch')" style="width:100%;margin-top:.35rem;font-size:.7rem">⇄ アカウント切り替え</button>
       <button class="btnlo" onclick="authLogout()">ログアウト</button>
     </div>
   </nav>
@@ -538,6 +542,16 @@ textarea.inp{resize:vertical;min-height:50px}
   <div class="ma"><button class="bs bg" onclick="closeM('m-request')">キャンセル</button><button class="bs ba" onclick="submitRq()">送信</button></div>
 </div></div>
 
+<div class="mov" id="m-switch"><div class="modal">
+  <div class="mtitle">⇄ アカウント切り替え</div>
+  <div id="switch-list" style="margin-bottom:.8rem"></div>
+  <div style="font-size:.78rem;color:var(--tx3);margin-bottom:.6rem">別のアカウントでログイン</div>
+  <div class="fg"><label>ユーザー名</label><input class="inp" type="text" id="sw-u" placeholder="username" autocomplete="off"></div>
+  <div class="fg"><label>パスワード</label><input class="inp" type="password" id="sw-p" placeholder="••••••••"></div>
+  <div class="ferr" id="sw-e"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-switch')">閉じる</button><button class="bs ba" onclick="switchLogin()">このアカウントで切り替え</button></div>
+</div></div>
+
 <div id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
@@ -578,7 +592,7 @@ const dbounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTim
 const dbTL = dbounce(v => { tlQ=v; tlOff=0; $('tl-grid').innerHTML=''; loadTL(); }, 350);
 const dbVid = dbounce(v => { vidQ=v; vidOff=0; $('vg').innerHTML=''; loadVids(); }, 350);
 function toast(msg, type='i') { const el=document.createElement('div'); el.className=`toast t${type}`; el.textContent=msg; $('toasts').appendChild(el); setTimeout(()=>el.remove(),3200); }
-function openM(id) { $(id).classList.add('on'); }
+function openM(id) { $(id).classList.add('on'); if(id==='m-switch')renderSwitchModal(); }
 function closeM(id) { $(id).classList.remove('on'); }
 document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');}));
 
@@ -659,6 +673,7 @@ function applyUser() {
   $('sb-n').textContent = ME.display_name;
   $('sb-r').textContent = ME.role==='admin'?'⚡ Admin':'Player';
   if (ME.role==='admin') $('ni-adm').style.display='';
+  renderSavedAccounts();
 }
 
 function swATab(t) {
@@ -701,6 +716,7 @@ async function authRegister() {
   if(error){err.textContent=error.message;b.disabled=false;b.textContent='アカウント作成';return;}
   if(data.user) {
     await sb.from('profiles').insert({ id:data.user.id, username:uname, display_name:name, avatar:av });
+    saveAccount(uname, name, av, hiddenEmail, pw);
     toast('アカウントを作成しました！','s');
   }
   b.disabled=false; b.textContent='アカウント作成';
@@ -710,8 +726,71 @@ async function authRegister() {
 
 async function authLogout() {
   if(dmSub) sb.removeChannel(dmSub);
+  // 現在のアカウントをsavedAccountsから削除してサインアウト
   await sb.auth.signOut();
+  ME=null;
   showScr('auth');
+}
+
+// ── アカウント切り替え ──
+function getSavedAccounts(){try{return JSON.parse(localStorage.getItem('ds_accounts')||'[]');}catch(_){return[];}}
+function saveAccount(uname,displayName,avatar,email,pw){
+  const accounts=getSavedAccounts();
+  const idx=accounts.findIndex(a=>a.uname===uname);
+  const entry={uname,displayName,avatar,email,pw};
+  if(idx>=0)accounts[idx]=entry;else accounts.push(entry);
+  localStorage.setItem('ds_accounts',JSON.stringify(accounts));
+}
+function renderSavedAccounts(){
+  const accounts=getSavedAccounts();
+  const el=$('saved-accounts');if(!el)return;
+  if(!accounts.length){el.innerHTML='';return;}
+  el.innerHTML=accounts.map(a=>`
+    <div class="sw-chip${ME?.username===a.uname?' cur':''}" onclick="quickSwitch('${a.uname}','${a.email}','${a.pw}')">
+      <span style="font-size:1.1rem">${a.avatar||'🎮'}</span>
+      <span style="font-size:.78rem;font-weight:700;flex:1">${a.displayName}</span>
+      ${ME?.username===a.uname?'<span style="font-size:.65rem;color:var(--accent)">●</span>':''}
+    </div>`).join('');
+}
+function renderSwitchModal(){
+  const accounts=getSavedAccounts();
+  const el=$('switch-list');if(!el)return;
+  if(!accounts.length){el.innerHTML='<p style="font-size:.78rem;color:var(--tx3)">保存済みアカウントなし</p>';return;}
+  el.innerHTML=`<div style="font-size:.78rem;color:var(--tx2);margin-bottom:.4rem">保存済みアカウント</div>`+
+    accounts.map(a=>`
+      <div class="sw-chip${ME?.username===a.uname?' cur':''}" onclick="quickSwitch('${a.uname}','${a.email}','${a.pw}')">
+        <span style="font-size:1.1rem">${a.avatar||'🎮'}</span>
+        <div style="flex:1"><div style="font-size:.82rem;font-weight:700">${a.displayName}</div><div style="font-size:.7rem;color:var(--tx3)">@${a.uname}</div></div>
+        ${ME?.username===a.uname?'<span style="font-size:.7rem;color:var(--accent)">現在</span>':'<span style="font-size:.7rem;color:var(--tx3);cursor:pointer" onclick="event.stopPropagation();removeAccount(''+a.uname+'')">✕</span>'}
+      </div>`).join('');
+}
+function removeAccount(uname){
+  const accounts=getSavedAccounts().filter(a=>a.uname!==uname);
+  localStorage.setItem('ds_accounts',JSON.stringify(accounts));
+  renderSavedAccounts();renderSwitchModal();
+}
+async function quickSwitch(uname,email,pw){
+  closeM('m-switch');
+  if(ME?.username===uname)return;
+  if(dmSub){sb.removeChannel(dmSub);dmSub=null;}
+  await sb.auth.signOut();
+  const {error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error){toast('切り替えに失敗しました','e');showScr('auth');return;}
+  toast(`@${uname} に切り替えました`,'s');
+}
+async function switchLogin(){
+  const uname=$('sw-u').value.trim(),pw=$('sw-p').value;
+  const e=$('sw-e');e.textContent='';
+  if(!uname||!pw){e.textContent='入力してください';return;}
+  const {data:prof}=await sb.from('profiles').select('auth_email,display_name,avatar').eq('username',uname).single();
+  if(!prof){e.textContent='ユーザーが見つかりません';return;}
+  if(dmSub){sb.removeChannel(dmSub);dmSub=null;}
+  await sb.auth.signOut();
+  const {error}=await sb.auth.signInWithPassword({email:prof.auth_email,password:pw});
+  if(error){e.textContent='パスワードが違います';// 元のアカウントに戻る処理は省略
+  return;}
+  saveAccount(uname,prof.display_name,prof.avatar,prof.auth_email,pw);
+  closeM('m-switch');toast(`@${uname} に切り替えました`,'s');
 }
 
 function showScr(n) { document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===`s-${n}`)); }
@@ -868,7 +947,7 @@ async function handleCreate(){
     js=useDb?`// GF リアルタイムDBの使い方:\n// await GF.set('score', 100);  // 保存\n// const v = await GF.get('score');  // 取得\n// GF.watch('score', v => console.log(v));  // リアルタイム監視\n\nfunction start(){\n  alert("ゲームスタート！");\n}`:`function start(){\n  alert("ゲームスタート！");\n}`;
   } else {
     html='';css='';
-    js=useDb?`# GF リアルタイムDBの使い方:\n# await GF.set('score', 100)\n# value = await GF.get('score')\n\nprint("Hello, GAMEFORGE!")\nprint("Pythonが動いています！")`:`print("Hello, GAMEFORGE!")\nprint("Pythonが動いています！")`;
+    js=useDb?`# GF リアルタイムDBの使い方:\n# await GF.set('score', 100)\n# value = await GF.get('score')\n\nprint("Hello, D·STUDIO!")\nprint("Pythonが動いています！")`:`print("Hello, D·STUDIO!")\nprint("Pythonが動いています！")`;
   }
   const { error } = await sb.from('games').insert({
     id,title,description:$('nc-d').value,how_to_play:$('nc-h').value,
@@ -1344,7 +1423,7 @@ async function loadAdmin(){
       ${(users||[]).map(u=>`<tr><td>${u.avatar||'🎮'}</td><td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${u.id}')">${esc(u.username)}</span></td><td>${esc(u.display_name)}</td><td>${u.role==='admin'?'⚡ Admin':'User'}</td>
       <td>${u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td>
       <td>${fd(u.created_at)}</td>
-      <td style="display:flex;gap:.3rem;flex-wrap:wrap">${u.id!==ME.id?`<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button>${u.banned!=='none'&&u.banned?`<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('${u.id}')">解除</button>`:''}`:'-'}</td></tr>`).join('')}
+      <td style="display:flex;gap:.3rem;flex-wrap:wrap">${u.id!==ME.id?`<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button>${u.banned!=='none'&&u.banned?`<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('${u.id}')">解除</button>`:''}${u.role!=='admin'?`<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('${u.id}')">⚡ 管理者</button>`:`<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('${u.id}')">管理者解除</button>`}`:'-'}</td></tr>`).join('')}
     </tbody></table>`;
   } else if(admTab==='games'){
     const { data: games } = await sb.from('games').select('*').order('updated_at',{ascending:false});
@@ -1420,6 +1499,8 @@ async function issueWarn(uid2,card){
   loadAdmin();
 }
 async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
+async function grantAdmin(uid2){if(!confirm('このユーザーに管理者権限を付与しますか？'))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
+async function revokeAdmin(uid2){if(!confirm('管理者権限を解除しますか？'))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
 
 // ── Admin Notices ─────────────────────────────
 async function loadAdmNotices(){const el=$('nt-list');if(!el)return;el.innerHTML='<div class="spin"></div>';const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);el.innerHTML='';if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.8rem">お知らせはありません</p>';return;}data.forEach(n=>{const d=document.createElement('div');d.className='ncard';d.innerHTML=`<div class="ntitle">${esc(n.title)}<button class="bs bd2" onclick="delNotice('${n.id}')" style="font-size:.68rem;padding:.15rem .42rem;margin-left:auto">削除</button></div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;el.appendChild(d);});}
