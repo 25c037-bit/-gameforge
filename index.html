@@ -1523,12 +1523,26 @@ async function loadAdmin(){
   const c=$('adm-c');c.innerHTML='<div class="spin"></div>';
   if(admTab==='users'){
     const { data: users } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
-    c.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>ロール</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead><tbody>
-      ${(users||[]).map(u=>`<tr><td>${u.avatar||'🎮'}</td><td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${u.id}')">${esc(u.username)}</span></td><td>${esc(u.display_name)}</td><td>${u.role==='admin'?'⚡ Admin':'User'}</td>
-      <td>${u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td>
-      <td>${fd(u.created_at)}</td>
-      <td><div style="display:flex;gap:.3rem;flex-wrap:wrap">${u.id!==ME.id?`<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button>${u.banned!=='none'&&u.banned?`<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('${u.id}')">解除</button>`:''}${u.role!=='admin'?`<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('${u.id}')">⚡ 管理者</button>`:`<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('${u.id}')">管理者解除</button>`}`:'-'}</div></td></tr>`).join('')}
-    </tbody></table>`;
+    const userRows = (users||[]).map(u=>{
+      const banned = u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':u.banned==='yellow'?'<span class="bdg bg-y">警告中</span>':'<span class="bdg bg-g">正常</span>';
+      let btns = '-';
+      if(u.id!==ME.id){
+        btns = '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal(''+u.id+'')">⚠ 警告</button>';
+        if(u.banned&&u.banned!=='none') btns += '<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn(''+u.id+'')">解除</button>';
+        if(u.role!=='admin') btns += '<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin(''+u.id+'')">⚡ 管理者</button>';
+        else btns += '<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin(''+u.id+'')">管理者解除</button>';
+      }
+      return '<tr>'
+        +'<td>'+(u.avatar||'🎮')+'</td>'
+        +'<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile(''+u.id+'')">'+esc(u.username)+'</span></td>'
+        +'<td>'+esc(u.display_name)+'</td>'
+        +'<td>'+(u.role==='admin'?'⚡ Admin':'User')+'</td>'
+        +'<td>'+banned+'</td>'
+        +'<td>'+fd(u.created_at)+'</td>'
+        +'<td><div style="display:flex;gap:.3rem;flex-wrap:wrap">'+btns+'</div></td>'
+        +'</tr>';
+    }).join('');
+    c.innerHTML='<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>ロール</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead><tbody>'+userRows+'</tbody></table>';
   } else if(admTab==='games'){
     const { data: games } = await sb.from('games').select('*').order('updated_at',{ascending:false});
     renderAdmGames(games||[],c);
@@ -1554,20 +1568,25 @@ async function loadAdmin(){
   }
 }
 function renderAdmGames(games,container){
-  container.innerHTML=`<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>👁</th><th>操作</th></tr></thead><tbody>
-    ${games.map(g=>`<tr>
-    <td>${esc(g.title)}</td>
-    <td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${g.author_id}')">${esc(g.author_name)}</span></td>
-    <td>${g.flagged?`<span class="bdg bg-r">⚠ ${esc(g.flag_reason||'通報済')}</span>`:g.is_published?'<span class="bdg bg-g">公開中</span>':'<span class="bdg bg-x">下書き</span>'}</td>
-    <td>${g.plays||0}</td>
-    <td><div style="display:flex;gap:.28rem;flex-wrap:wrap;align-items:center">
-      <button class="bs bg" style="font-size:.7rem" onclick="admSrc('${g.id}')">💻 コード</button>
-      <button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${g.author_id}')">⚠ 作者に警告</button>
-      ${g.flagged
-        ?`<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag('${g.id}')">✅ 非表示解除</button>`
-        :`<button class="bs bd2" style="font-size:.7rem" onclick="admFlag('${g.id}')">🚫 非表示</button>`}
-    </div></td></tr>`).join('')}
-  </tbody></table>`;
+  const rows = games.map(g=>{
+    const statusBadge = g.flagged
+      ? '<span class="bdg bg-r">⚠ '+esc(g.flag_reason||'通報済')+'</span>'
+      : g.is_published ? '<span class="bdg bg-g">公開中</span>' : '<span class="bdg bg-x">下書き</span>';
+    const actionBtn = g.flagged
+      ? '<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag(''+g.id+'')">✅ 非表示解除</button>'
+      : '<button class="bs bd2" style="font-size:.7rem" onclick="admFlag(''+g.id+'')">🚫 非表示</button>';
+    return '<tr>'
+      + '<td>'+esc(g.title)+'</td>'
+      + '<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile(''+g.author_id+'')">'+esc(g.author_name)+'</span></td>'
+      + '<td>'+statusBadge+'</td>'
+      + '<td>'+(g.plays||0)+'</td>'
+      + '<td><div style="display:flex;gap:.28rem;flex-wrap:wrap">'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="admSrc(''+g.id+'')">💻 コード</button>'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal(''+g.author_id+'')">⚠ 作者に警告</button>'
+      + actionBtn
+      + '</div></td></tr>';
+  }).join('');
+  container.innerHTML = '<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>👁</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 async function admSearch(){const q=$('adm-sq').value.trim();const { data } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%`);const el=$('adm-sr');if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.82rem">見つかりませんでした</p>';return;}el.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>状態</th><th>操作</th></tr></thead><tbody>${data.map(u=>`<tr><td>${u.avatar||'🎮'}</td><td>${esc(u.username)}</td><td>${esc(u.display_name)}</td><td>${u.banned!=='none'&&u.banned?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td><td><div style="display:flex;gap:.3rem"><button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button></div></td></tr>`).join('')}</tbody></table>`;}
 async function admSrc(gid){const { data: g } = await sb.from('games').select('html,css,js,title').eq('id',gid).single();if(!g)return;$('src-c').innerHTML=`<div style="margin-bottom:.35rem"><span class="bdg bg-g">HTML</span></div><div class="srcv"><pre>${esc(g.html)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-y">CSS</span></div><div class="srcv"><pre>${esc(g.css)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-x">JS</span></div><div class="srcv"><pre>${esc(g.js)}</pre></div>`;openM('m-source');}
