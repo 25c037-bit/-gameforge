@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>D·STUDIO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<style>
+/* ── Design System ── */
+:root{
+  --bg:#080c14;--bg2:#0d1220;--bg3:#111827;--bg4:#1a2235;
+  --accent:#00e5ff;--a2:#7c3aed;--a3:#f59e0b;
+  --red:#ef4444;--green:#10b981;
+  --tx:#e2e8f0;--tx2:#94a3b8;--tx3:#475569;
+  --bd:#1e293b;--bd2:#2d3a50;
+  --r:10px;--r2:16px;
+  --fh:'Orbitron',monospace;--fb:'Noto Sans JP',sans-serif;--fm:'JetBrains Mono',monospace;
+  --sh:0 4px 24px rgba(0,229,255,.08);--gw:0 0 20px rgba(0,229,255,.3);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);font-size:14px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+#app{display:flex;height:100vh;width:100vw;overflow:hidden}
+
+/* ── Screens ── */
+.scr{display:none;width:100%;height:100%}.scr.on{display:flex}
+
+/* ── Auth ── */
+#s-auth{align-items:center;justify-content:center;position:relative;overflow:hidden}
+.abg{position:absolute;inset:0}
+.agrid{position:absolute;inset:0;background-image:linear-gradient(var(--bd) 1px,transparent 1px),linear-gradient(90deg,var(--bd) 1px,transparent 1px);background-size:40px 40px;opacity:.2}
+.aorb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.aorb1{width:500px;height:500px;background:rgba(0,229,255,.06);top:-150px;right:-100px}
+.aorb2{width:400px;height:400px;background:rgba(124,58,237,.07);bottom:-100px;left:-100px}
+.awrap{position:relative;z-index:1;width:100%;max-width:440px;padding:1.5rem}
+.logo{text-align:center;margin-bottom:1.8rem}
+.logo-i{font-size:2.5rem;filter:drop-shadow(0 0 14px var(--accent));animation:gp 2.5s ease-in-out infinite}
+@keyframes gp{0%,100%{filter:drop-shadow(0 0 8px var(--accent))}50%{filter:drop-shadow(0 0 26px var(--accent))}}
+.logo-t{font-family:var(--fh);font-size:1.9rem;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-s{font-size:.66rem;letter-spacing:.45em;color:var(--tx3);margin-top:.25rem}
+.acard{background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.6rem;box-shadow:var(--sh)}
+.btng{width:100%;display:flex;align-items:center;justify-content:center;gap:.7rem;padding:.75rem;background:#fff;border:none;border-radius:var(--r);color:#3c4043;font-size:.88rem;font-weight:600;font-family:var(--fb);cursor:pointer;transition:.2s;margin-bottom:.9rem}
+.btng:hover{background:#f1f3f4;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.div{display:flex;align-items:center;gap:.7rem;color:var(--tx3);font-size:.75rem;margin:.7rem 0}
+.div::before,.div::after{content:'';flex:1;height:1px;background:var(--bd2)}
+.atabs{display:flex;gap:.4rem;margin-bottom:1.1rem}
+.atab{flex:1;padding:.5rem;background:transparent;border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx2);font-family:var(--fb);font-size:.8rem;cursor:pointer;transition:.2s}
+.atab.on{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+.aform{display:none}.aform.on{display:block}
+.fg{margin-bottom:.8rem}.fg label{display:block;font-size:.71rem;color:var(--tx2);margin-bottom:.3rem}
+.inp{width:100%;padding:.6rem .8rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.86rem;outline:none;transition:.2s}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.1)}
+.avs{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem}
+.avo{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:var(--bg4);border:2px solid var(--bd2);border-radius:7px;cursor:pointer;transition:.15s}
+.avo.on{border-color:var(--accent);background:rgba(0,229,255,.1)}
+.ferr{color:var(--red);font-size:.76rem;margin-top:.35rem;min-height:1em}
+.btnp{width:100%;padding:.72rem;background:linear-gradient(135deg,var(--accent),var(--a2));border:none;border-radius:var(--r);color:#fff;font-family:var(--fh);font-size:.8rem;letter-spacing:.1em;cursor:pointer;transition:.2s;margin-top:.3rem;font-weight:700}
+.btnp:hover{opacity:.9;transform:translateY(-1px);box-shadow:var(--gw)}
+.btnp:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.alink{display:block;text-align:center;color:var(--accent);font-size:.76rem;cursor:pointer;margin-top:.7rem}
+.alink:hover{text-decoration:underline}
+
+/* ── Main Layout ── */
+#s-main{flex-direction:row}
+.sb{width:210px;min-width:210px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100%;overflow:hidden;z-index:10;transition:.25s}
+.sb-logo{padding:1rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.55rem;cursor:pointer}
+.sb-logo-i{font-size:1.3rem;filter:drop-shadow(0 0 5px var(--accent))}
+.sb-logo-t{font-family:var(--fh);font-size:.84rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sb-s{padding:.6rem .7rem;border-bottom:1px solid var(--bd)}
+.sb-s input{width:100%;padding:.42rem .65rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:20px;color:var(--tx);font-size:.76rem;font-family:var(--fb);outline:none}
+.sb-s input:focus{border-color:var(--accent)}
+.sb-nav{flex:1;padding:.4rem;overflow-y:auto}
+.ni{width:100%;display:flex;align-items:center;gap:.6rem;padding:.58rem .7rem;background:transparent;border:none;border-radius:var(--r);color:var(--tx2);font-family:var(--fb);font-size:.82rem;cursor:pointer;transition:.15s;text-align:left}
+.ni:hover{background:var(--bg4);color:var(--tx)}.ni.on{background:rgba(0,229,255,.1);color:var(--accent)}
+.ni-i{font-size:.9rem;width:18px;text-align:center}.ni-l{flex:1}
+.ni-b{background:var(--red);color:#fff;font-size:.6rem;padding:.08rem .35rem;border-radius:10px;font-weight:700}
+.sb-bot{padding:.65rem;border-top:1px solid var(--bd)}
+.uchip{display:flex;align-items:center;gap:.5rem;padding:.45rem;background:var(--bg3);border-radius:var(--r);cursor:pointer;transition:.15s}.uchip:hover{background:var(--bg4)}
+.uav{font-size:1.2rem;width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:6px;flex-shrink:0}
+.un{font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ur{font-size:.66rem;color:var(--tx3)}
+.btnlo{width:100%;margin-top:.4rem;padding:.35rem;background:transparent;border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx3);font-size:.7rem;cursor:pointer;transition:.15s}
+.btnlo:hover{border-color:var(--red);color:var(--red)}
+
+/* ── Pages ── */
+.mc{flex:1;height:100%;overflow:hidden;display:flex;flex-direction:column}
+.pg{display:none;height:100%;flex-direction:column;overflow:hidden}.pg.on{display:flex}
+.ph{padding:.8rem 1.3rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.7rem;flex-shrink:0;flex-wrap:wrap}
+.pt{font-family:var(--fh);font-size:.9rem;font-weight:700;color:var(--accent)}
+.pb{flex:1;overflow-y:auto;padding:1rem 1.3rem}
+.sbar{flex:1;max-width:360px;position:relative}
+.sbar input{width:100%;padding:.44rem .8rem .44rem 2rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:20px;color:var(--tx);font-size:.8rem;font-family:var(--fb);outline:none;transition:.2s}
+.sbar input:focus{border-color:var(--accent)}.sbar::before{content:"🔍";position:absolute;left:.55rem;top:50%;transform:translateY(-50%);font-size:.72rem}
+
+/* ── Buttons ── */
+.bs{padding:.35rem .8rem;border-radius:var(--r);border:none;cursor:pointer;font-size:.74rem;font-family:var(--fb);transition:.15s;font-weight:600;display:inline-flex;align-items:center;gap:.3rem}
+.ba{background:var(--accent);color:#000}.ba:hover{opacity:.85}
+.bg{background:transparent;border:1px solid var(--bd2);color:var(--tx2)}.bg:hover{border-color:var(--accent);color:var(--accent)}
+.bd2{background:var(--red);color:#fff}.bd2:hover{opacity:.85}
+.bgn{background:var(--green);color:#fff}.bgn:hover{opacity:.85}
+.bs:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Cards ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.9rem}
+.card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:.2s;display:flex;flex-direction:column}
+.card:hover{border-color:var(--bd2);transform:translateY(-2px);box-shadow:var(--sh)}
+.cthumb{height:120px;background:linear-gradient(135deg,var(--bg3),var(--bg4));display:flex;align-items:center;justify-content:center;font-size:2.5rem;flex-shrink:0}
+.cbody{padding:.8rem;flex:1;display:flex;flex-direction:column}
+.ctitle{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.22rem}
+.cdesc{font-size:.76rem;color:var(--tx2);line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cmeta{display:flex;align-items:center;gap:.6rem;margin-top:.65rem;font-size:.7rem;color:var(--tx3)}
+.cauthor{display:flex;align-items:center;gap:.28rem;color:var(--tx2);cursor:pointer}.cauthor:hover{color:var(--accent)}
+.cstats{display:flex;gap:.65rem;margin-left:auto}
+.cfoot{padding:.55rem .8rem;border-top:1px solid var(--bd);display:flex;gap:.25rem;flex-wrap:wrap}
+.rbtn{background:var(--bg4);border:1px solid var(--bd);border-radius:20px;padding:.2rem .5rem;font-size:.7rem;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:.2rem}
+.rbtn:hover{border-color:var(--bd2)}.rbtn.on{background:rgba(0,229,255,.15);border-color:var(--accent)}
+.lmore{display:block;width:100%;margin-top:1rem;padding:.7rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx2);cursor:pointer;font-family:var(--fb);font-size:.8rem;transition:.15s}
+.lmore:hover{border-color:var(--accent);color:var(--accent)}
+.empty{text-align:center;padding:3rem 2rem;color:var(--tx3)}.ei{font-size:2.5rem;margin-bottom:.7rem}.et{font-size:.9rem;color:var(--tx2);margin-bottom:.35rem}
+
+/* ── My Games ── */
+.mrow{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:.8rem .9rem;display:flex;align-items:center;gap:.8rem;margin-bottom:.45rem;transition:.15s}.mrow:hover{border-color:var(--bd2)}
+.minfo{flex:1;min-width:0}.mtitle{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mmeta{font-size:.7rem;color:var(--tx3);margin-top:.16rem}
+.bdg{display:inline-flex;align-items:center;gap:.15rem;font-size:.66rem;padding:.1rem .42rem;border-radius:4px;font-weight:700}
+.bg-g{background:rgba(16,185,129,.15);color:var(--green)}.bg-y{background:rgba(245,158,11,.15);color:var(--a3)}
+.bg-r{background:rgba(239,68,68,.15);color:var(--red)}.bg-x{background:var(--bg4);color:var(--tx3)}.bg-b{background:rgba(0,229,255,.12);color:var(--accent)}
+
+/* ── Editor ── */
+#p-editor.on{flex-direction:row!important;height:100%}
+.edl{width:50%;min-width:280px;display:flex;flex-direction:column;border-right:1px solid var(--bd);height:100%}
+.edtb{padding:.5rem .7rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.4rem;flex-shrink:0;flex-wrap:wrap}
+.edti{flex:1;min-width:80px;background:transparent;border:none;color:var(--tx);font-size:.9rem;font-weight:700;font-family:var(--fb);outline:none}
+.edti::placeholder{color:var(--tx3)}
+.tbar{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--bg2);overflow-x:auto}
+.etab{padding:.45rem .85rem;background:transparent;border:none;border-right:1px solid var(--bd);color:var(--tx3);font-family:var(--fm);font-size:.73rem;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:.32rem;white-space:nowrap;flex-shrink:0}
+.etab.on{background:var(--bg3);color:var(--accent)}
+.tc{opacity:0;font-size:.66rem;padding:.06rem .15rem;border-radius:3px;line-height:1}.etab:hover .tc{opacity:1}.tc:hover{background:var(--red)!important;color:#fff}
+.tadd{padding:.45rem .7rem;background:transparent;border:none;border-right:1px solid var(--bd);color:var(--tx3);cursor:pointer;font-size:.88rem;flex-shrink:0}.tadd:hover{color:var(--accent)}
+.epane{flex:1;overflow:hidden;position:relative}
+.CodeMirror{height:100%!important;font-family:var(--fm)!important;font-size:13px!important;line-height:1.6!important}
+.edr{flex:1;display:flex;flex-direction:column;height:100%;min-width:0}
+.pvtb{padding:.5rem .7rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.45rem;flex-shrink:0}
+.pvtitle{font-size:.73rem;font-weight:700;color:var(--tx2);font-family:var(--fm)}
+.pvwrap{flex:1;position:relative;overflow:hidden}
+#pv-frame{width:100%;height:100%;border:none;background:#fff}
+.erov{position:absolute;bottom:0;left:0;right:0;max-height:38%;overflow-y:auto;background:rgba(8,12,20,.96);border-top:2px solid var(--red);padding:.6rem .85rem}
+.erov.hide{display:none}.ert{color:var(--red);font-size:.7rem;font-weight:700;font-family:var(--fm);margin-bottom:.22rem}
+.erl{color:var(--red);font-size:.7rem;font-family:var(--fm);padding:.07rem 0;border-bottom:1px solid rgba(239,68,68,.1)}
+.emeta{border-top:1px solid var(--bd);padding:.7rem;flex-shrink:0;background:var(--bg2)}
+.m2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem}
+textarea.inp{resize:vertical;min-height:50px}
+.mlbl{font-size:.68rem;color:var(--tx3);display:block;margin-bottom:.2rem}
+.sst{font-size:.68rem;font-family:var(--fm)}.sst.s{color:var(--green)}.sst.w{color:var(--a3)}.sst.e{color:var(--red)}
+.vlist{max-height:130px;overflow-y:auto;margin-top:.35rem}
+.vrow{display:flex;align-items:center;gap:.45rem;padding:.28rem .42rem;background:var(--bg3);border-radius:5px;margin-bottom:.22rem;font-size:.7rem}
+.vnum{font-family:var(--fm);color:var(--accent);font-weight:700;min-width:36px}.vdate{color:var(--tx3);flex:1}
+.vrest{background:transparent;border:1px solid var(--bd2);border-radius:3px;color:var(--tx2);font-size:.66rem;padding:.1rem .35rem;cursor:pointer;transition:.15s}.vrest:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Play ── */
+.pcont{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.phd{padding:.8rem 1.3rem;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:.9rem;flex-shrink:0}
+.ptitle{font-family:var(--fh);font-size:1.15rem;font-weight:700}
+.parow{font-size:.76rem;color:var(--tx2);margin-top:.18rem;display:flex;align-items:center;gap:.38rem;flex-wrap:wrap}
+.palink{color:var(--accent);cursor:pointer}.palink:hover{text-decoration:underline}
+.pstats{display:flex;gap:.85rem;font-size:.73rem;color:var(--tx3);margin-top:.3rem}
+.pfw{flex:1;position:relative;overflow:hidden}
+#pframe{width:100%;height:100%;border:none}
+.rrow{display:flex;gap:.38rem;padding:.55rem 1.3rem;flex-wrap:wrap;flex-shrink:0;border-top:1px solid var(--bd)}
+.pinfo{display:flex;gap:.9rem;padding:.7rem 1.3rem;flex-shrink:0;flex-wrap:wrap}
+.pisec{flex:1;min-width:160px}.pilbl{font-size:.68rem;color:var(--tx3);font-weight:700;letter-spacing:.04em;margin-bottom:.22rem}.pitxt{font-size:.8rem;color:var(--tx2);line-height:1.6}
+
+/* ── Videos ── */
+.vc{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:.2s}
+.vc:hover{border-color:var(--bd2);transform:translateY(-2px);box-shadow:var(--sh)}
+.vthumb{height:140px;background:linear-gradient(135deg,var(--bg2),var(--bg3));display:flex;align-items:center;justify-content:center;font-size:3rem}
+.vbody{padding:.8rem}
+.vtitle{font-weight:700;font-size:.88rem;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta{font-size:.7rem;color:var(--tx3);display:flex;align-items:center;gap:.6rem;margin-top:.5rem}
+.vauth{color:var(--tx2);cursor:pointer}.vauth:hover{color:var(--accent)}
+.vpwrap{position:relative;width:100%;padding-top:56.25%;background:#000;border-radius:var(--r);overflow:hidden;margin-bottom:.8rem}
+.vpwrap video{position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* ── DM ── */
+.dml{display:flex;height:100%;overflow:hidden}
+.dmlist{width:240px;min-width:240px;border-right:1px solid var(--bd);overflow-y:auto;background:var(--bg2)}
+.dmi{padding:.75rem .9rem;border-bottom:1px solid var(--bd);cursor:pointer;transition:.15s;display:flex;gap:.6rem;align-items:center}
+.dmi:hover{background:var(--bg3)}.dmi.on{background:rgba(0,229,255,.08)}
+.dmav{font-size:1.3rem;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:8px;flex-shrink:0;position:relative}
+.dmub{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:.58rem;padding:.08rem .28rem;border-radius:8px;font-weight:700}
+.dminfo{flex:1;min-width:0}.dmname{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmlast{font-size:.72rem;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.1rem}
+.dmchat{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.dmchd{padding:.7rem 1rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+.dmmsgs{flex:1;overflow-y:auto;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.6rem}
+.dmemp{display:flex;align-items:center;justify-content:center;flex:1;color:var(--tx3);font-size:.85rem}
+.msgr{display:flex;gap:.5rem;max-width:75%}.msgr.me{align-self:flex-end;flex-direction:row-reverse}
+.msgav{font-size:1rem;width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:6px;flex-shrink:0;align-self:flex-end}
+.msgb{padding:.55rem .8rem;border-radius:12px;font-size:.82rem;line-height:1.55}
+.msgr.me .msgb{background:var(--a2);color:#fff;border-bottom-right-radius:4px}
+.msgr:not(.me) .msgb{background:var(--bg3);border-bottom-left-radius:4px}
+.msgt{font-size:.65rem;color:var(--tx3);margin-top:.2rem;text-align:right}
+.dminp{padding:.7rem .9rem;border-top:1px solid var(--bd);display:flex;gap:.5rem;flex-shrink:0}
+.dminp input{flex:1;padding:.55rem .8rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:20px;color:var(--tx);font-family:var(--fb);font-size:.82rem;outline:none}
+.dminp input:focus{border-color:var(--accent)}
+
+/* ── Profile ── */
+.prfhd{display:flex;align-items:flex-start;gap:1.2rem;padding:1.2rem;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r2);margin-bottom:1rem}
+.prfav{font-size:2.8rem;width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:13px;flex-shrink:0}
+.prfname{font-size:1.15rem;font-weight:700}.prfun{font-size:.8rem;color:var(--tx3);margin-top:.15rem}
+.prfbio{font-size:.8rem;color:var(--tx2);margin-top:.42rem;line-height:1.6}
+.prflinks{display:flex;gap:.7rem;margin-top:.45rem;font-size:.76rem}
+.prflink{color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:.22rem}.prflink:hover{text-decoration:underline}
+.prfstats{display:flex;gap:1.2rem;margin-top:.65rem}
+.psn{font-size:1rem;font-weight:700;color:var(--accent)}.psl{font-size:.68rem;color:var(--tx3)}
+.prfact{margin-left:auto;display:flex;gap:.38rem;flex-direction:column;align-items:flex-end;flex-shrink:0}
+.rqbdg{display:inline-block;background:rgba(0,229,255,.15);color:var(--accent);font-size:.72rem;padding:.2rem .55rem;border-radius:20px;margin-top:.35rem}
+
+/* ── Request ── */
+.rqcard{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:.85rem;margin-bottom:.5rem}
+.rqfrom{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.rqmsg{font-size:.82rem;color:var(--tx2);line-height:1.6;background:var(--bg4);padding:.6rem .8rem;border-radius:var(--r);margin-bottom:.6rem}
+.rqst{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;padding:.18rem .5rem;border-radius:20px;font-weight:700}
+.rqp{background:rgba(245,158,11,.15);color:var(--a3)}.rqa{background:rgba(16,185,129,.15);color:var(--green)}.rqr{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* ── Notice ── */
+.ncard{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:.9rem;margin-bottom:.55rem;border-left:3px solid var(--accent)}
+.ncard.w{border-left-color:var(--a3)}.ncard.d{border-left-color:var(--red)}
+.ntitle{font-weight:700;font-size:.9rem;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem}
+.nbody{font-size:.82rem;color:var(--tx2);line-height:1.6}
+.nmeta{font-size:.7rem;color:var(--tx3);margin-top:.5rem}
+
+/* ── Settings ── */
+.ssec{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r2);padding:1.2rem;margin-bottom:.9rem}
+.stitle{font-family:var(--fh);font-size:.8rem;color:var(--accent);margin-bottom:.9rem}
+.crow{display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid var(--bd)}.crow:last-child{border-bottom:none}
+.ci{font-size:1.1rem;width:30px;text-align:center}.cinfo{flex:1}
+.cname{font-weight:600;font-size:.85rem}.cst{font-size:.72rem;color:var(--tx3);margin-top:.08rem}.cst.lk{color:var(--green)}
+
+/* ── Admin ── */
+.atabs2{display:flex;gap:.38rem;margin-bottom:.85rem;flex-wrap:wrap}
+.atab2{padding:.36rem .82rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx2);cursor:pointer;font-size:.78rem;transition:.15s}
+.atab2.on{background:var(--a2);border-color:var(--a2);color:#fff}
+.atbl{width:100%;border-collapse:collapse}
+.atbl th{text-align:left;padding:.42rem .62rem;font-size:.7rem;color:var(--tx3);border-bottom:1px solid var(--bd);font-weight:700;letter-spacing:.04em}
+.atbl td{padding:.52rem .62rem;border-bottom:1px solid var(--bd);font-size:.78rem;vertical-align:middle}
+.atbl tr:hover td{background:var(--bg3)}
+.srcv{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:.8rem;margin-top:.7rem}
+.srcv pre{font-family:var(--fm);font-size:.73rem;color:var(--tx2);white-space:pre-wrap;word-break:break-all;line-height:1.6;max-height:260px;overflow-y:auto}
+
+/* ── Modal ── */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.mov.on{display:flex}
+.modal{background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.3rem;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal.wide{max-width:700px}
+.mtitle{font-family:var(--fh);font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.85rem}
+.ma{display:flex;gap:.42rem;margin-top:.85rem;justify-content:flex-end}
+
+/* ── Toast ── */
+#toasts{position:fixed;bottom:1.3rem;right:1.3rem;z-index:200;display:flex;flex-direction:column;gap:.42rem}
+.toast{padding:.62rem 1rem;border-radius:var(--r);color:#fff;font-size:.8rem;animation:tin .22s ease;max-width:290px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+.ts{background:var(--green)}.te{background:var(--red)}.ti{background:var(--a2)}
+@keyframes tin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bd2);border-top-color:var(--accent);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
+.lang-opt{background:var(--bg4);border:2px solid var(--bd2);border-radius:var(--r);padding:.8rem;cursor:pointer;transition:.2s;text-align:center;color:var(--tx2);font-family:var(--fb)}
+.lang-opt:hover{border-color:var(--accent);color:var(--tx)}
+.lang-opt.on{border-color:var(--accent);background:rgba(0,229,255,.1);color:var(--tx)}
+.pyout{background:#0d1117;border-radius:var(--r);padding:.7rem .9rem;font-family:var(--fm);font-size:.78rem;line-height:1.6;min-height:60px;max-height:200px;overflow-y:auto;margin-top:.5rem;white-space:pre-wrap;word-break:break-all}
+.pyout .py-out{color:#a8ff78}.pyout .py-err{color:var(--red)}.pyout .py-in{color:var(--accent3)}
+.db-panel{background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);padding:.7rem .9rem;margin-top:.5rem}
+.db-row{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--bd);font-size:.78rem}.db-row:last-child{border-bottom:none}
+.db-key{color:var(--accent);font-family:var(--fm);min-width:120px}.db-val{color:var(--tx2);flex:1;font-family:var(--fm)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.typing{color:var(--tx3);font-size:.75rem;font-style:italic;padding:.2rem .5rem}
+.sw-chip{display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;background:var(--bg4);border-radius:var(--r);cursor:pointer;margin-bottom:.35rem;transition:.15s;border:1px solid var(--bd2)}
+.sw-chip:hover{border-color:var(--accent)}.sw-chip.cur{border-color:var(--accent);background:rgba(0,229,255,.08)}
+
+@media(max-width:768px){
+  .sb{width:48px;min-width:48px}
+  .sb-logo-t,.ni-l,.sb-s,.cinfo,.btnlo{display:none}
+  .uchip{justify-content:center}
+  .grid{grid-template-columns:1fr}
+  #p-editor.on{flex-direction:column}
+  .edl,.edr{width:100%;height:50%}
+  .dmlist{width:180px;min-width:180px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- AUTH -->
+<div id="s-auth" class="scr on">
+  <div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>
+  <div class="awrap">
+    <div class="logo"><div class="logo-i">⬡</div><div class="logo-t">D·STUDIO</div><div class="logo-s">CODE · CREATE · SHARE</div></div>
+    <div class="acard">
+      <div class="atabs"><button class="atab on" onclick="swATab('li')">ログイン</button><button class="atab" onclick="swATab('re')">新規登録</button></div>
+      <div id="af-li" class="aform on">
+        <div class="fg"><label>ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username" autocomplete="off"></div>
+        <div class="fg"><label>パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>
+        <div class="ferr" id="li-err"></div>
+        <button class="btnp" id="btn-li" onclick="authLogin()">ログイン</button>
+      </div>
+      <div id="af-re" class="aform">
+        <div class="fg"><label>パスワード（6文字以上）</label><input class="inp" type="password" id="re-p" placeholder="••••••••"></div>
+        <div class="fg"><label>表示名（日本語OK）</label><input class="inp" type="text" id="re-n" placeholder="あなたの名前"></div>
+        <div class="fg"><label>ユーザー名（英数字）</label><input class="inp" type="text" id="re-u" placeholder="username" autocomplete="off"></div>
+        <div class="fg"><label>アバター</label>
+          <div class="avs" id="avs">
+            <div class="avo on" data-v="🎮">🎮</div><div class="avo" data-v="🚀">🚀</div><div class="avo" data-v="⭐">⭐</div>
+            <div class="avo" data-v="🐱">🐱</div><div class="avo" data-v="🦊">🦊</div><div class="avo" data-v="🐲">🐲</div>
+            <div class="avo" data-v="👾">👾</div><div class="avo" data-v="🤖">🤖</div><div class="avo" data-v="🔥">🔥</div><div class="avo" data-v="💎">💎</div>
+          </div>
+        </div>
+        <div class="ferr" id="re-err"></div>
+        <button class="btnp" id="btn-re" onclick="authRegister()">アカウント作成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="s-main" class="scr">
+  <nav class="sb">
+    <div class="sb-logo" onclick="go('timeline')"><div class="sb-logo-i">⬡</div><div class="sb-logo-t">D·STUDIO</div></div>
+    <div class="sb-s"><input type="text" placeholder="検索..." id="sb-s" oninput="dbTL(this.value)"></div>
+    <div class="sb-nav">
+      <button class="ni on" data-p="timeline" onclick="go('timeline')"><span class="ni-i">🏠</span><span class="ni-l">タイムライン</span></button>
+      <button class="ni" data-p="videos" onclick="go('videos')"><span class="ni-i">🎬</span><span class="ni-l">動画</span></button>
+      <button class="ni" data-p="my-games" onclick="go('my-games')"><span class="ni-i">🎮</span><span class="ni-l">マイゲーム</span></button>
+      <button class="ni" onclick="openCM()"><span class="ni-i">✨</span><span class="ni-l">新規作成</span></button>
+      <button class="ni" data-p="dm" onclick="go('dm')"><span class="ni-i">💬</span><span class="ni-l">DM</span><span class="ni-b" id="dm-b" style="display:none">●</span></button>
+      <button class="ni" data-p="requests" onclick="go('requests')"><span class="ni-i">📩</span><span class="ni-l">リクエスト</span><span class="ni-b" id="rq-b" style="display:none">●</span></button>
+      <button class="ni" data-p="notices" onclick="go('notices')"><span class="ni-i">📢</span><span class="ni-l">お知らせ</span></button>
+      <button class="ni" data-p="settings" onclick="go('settings')"><span class="ni-i">⚙️</span><span class="ni-l">設定</span></button>
+      <button class="ni" id="ni-adm" data-p="admin" onclick="go('admin')" style="display:none"><span class="ni-i">🛡️</span><span class="ni-l">管理パネル</span></button>
+    </div>
+    <div class="sb-bot">
+      <div class="uchip" onclick="showMyProfile()">
+        <div class="uav" id="sb-av">🎮</div>
+        <div style="flex:1;min-width:0"><div class="un" id="sb-n">-</div><div class="ur" id="sb-r">Player</div></div>
+      </div>
+      <div id="saved-accounts" style="margin-top:.4rem"></div>
+      <button class="bs bg" onclick="openM('m-switch')" style="width:100%;margin-top:.35rem;font-size:.7rem">⇄ アカウント切り替え</button>
+      <button class="btnlo" onclick="authLogout()">ログアウト</button>
+    </div>
+  </nav>
+
+  <div class="mc">
+    <!-- TIMELINE -->
+    <div id="p-timeline" class="pg on">
+      <div class="ph"><span class="pt">タイムライン</span><div class="sbar"><input type="text" placeholder="タイトル・作者で検索..." id="tl-s" oninput="dbTL(this.value)"></div><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
+      <div class="pb"><div class="grid" id="tl-grid"></div><button class="lmore" id="tl-more" onclick="loadMoreTL()" style="display:none">もっと見る</button></div>
+    </div>
+    <!-- VIDEOS -->
+    <div id="p-videos" class="pg">
+      <div class="ph"><span class="pt">🎬 動画</span><div class="sbar"><input type="text" placeholder="動画を検索..." id="vs-s" oninput="dbVid(this.value)"></div><button class="bs ba" onclick="openUM()">＋ 動画投稿</button></div>
+      <div class="pb"><div class="grid" id="vg"></div><button class="lmore" id="vg-more" onclick="loadMoreVid()" style="display:none">もっと見る</button></div>
+    </div>
+    <!-- MY GAMES -->
+    <div id="p-my-games" class="pg">
+      <div class="ph"><span class="pt">マイゲーム</span><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
+      <div class="pb" id="mg-b"></div>
+    </div>
+    <!-- EDITOR -->
+    <div id="p-editor" class="pg">
+      <div class="edl">
+        <div class="edtb">
+          <input class="edti" type="text" id="ed-t" placeholder="ゲームタイトル..." oninput="schedSave()">
+          <span class="sst s" id="sst">● 保存済</span>
+          <button class="bs bg" onclick="refreshPV()" title="更新">⟳</button>
+          <button class="bs ba" onclick="handleDeploy()">🚀 公開</button>
+        </div>
+        <div class="tbar" id="ed-tabs"></div>
+        <div class="epane" id="ed-pane"></div>
+        <div class="emeta">
+          <div class="m2">
+            <div><label class="mlbl">説明</label><textarea class="inp" id="ed-d" rows="2" oninput="schedSave()"></textarea></div>
+            <div><label class="mlbl">遊び方</label><textarea class="inp" id="ed-h" rows="2" oninput="schedSave()"></textarea></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:.68rem;color:var(--tx3)">バージョン:</span>
+            <button class="bs bg" onclick="toggleVH()" style="font-size:.68rem;padding:.26rem .55rem">📋 履歴</button>
+            <span style="font-size:.68rem;color:var(--tx3);margin-left:auto" id="ed-vi"></span>
+          </div>
+          <div class="vlist" id="vlist" style="display:none;margin-top:.35rem"></div>
+        </div>
+      </div>
+      <div class="edr">
+        <div class="pvtb"><span class="pvtitle">▶ PREVIEW</span><span style="flex:1"></span><button class="bs bg" onclick="openGameUrl(edGID)" style="font-size:.68rem">別ページで開く ↗</button></div>
+        <div class="pvwrap"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
+      </div>
+    </div>
+    <!-- PLAY -->
+    <div id="p-play" class="pg">
+      <div class="pcont">
+        <div class="phd">
+          <div style="flex:1;min-width:0">
+            <div class="ptitle" id="pl-t">-</div>
+            <div class="parow"><span id="pl-av">🎮</span><span class="palink" id="pl-au" onclick="showProfile(curAu)">-</span><span id="pl-fb"></span></div>
+            <div class="pstats"><span>👁 <span id="pl-vw">0</span></span><span>🏷 v<span id="pl-vr">1</span></span></div>
+          </div>
+          <div style="display:flex;gap:.38rem;flex-shrink:0;flex-wrap:wrap">
+            <button class="bs bg" onclick="goBack()">← 戻る</button>
+            <button class="bs bg" id="pl-ed" style="display:none" onclick="go('editor',edGID)">✏️ 編集</button>
+            <button class="bs bd2" id="pl-adm" style="display:none" onclick="adminGameAct(edGID)">🛡 管理</button>
+          </div>
+        </div>
+        <div class="pfw"><iframe id="pframe" sandbox="allow-scripts allow-same-origin"></iframe></div>
+        <div class="rrow" id="pl-react"></div>
+        <div class="pinfo">
+          <div class="pisec"><div class="pilbl">📝 説明</div><div class="pitxt" id="pl-desc">-</div></div>
+          <div class="pisec"><div class="pilbl">🕹 遊び方</div><div class="pitxt" id="pl-how">-</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- VIDEO PLAYER -->
+    <div id="p-vidplay" class="pg">
+      <div class="ph"><span class="pt" id="vp-t">動画</span><button class="bs bg" onclick="goBack()">← 戻る</button></div>
+      <div class="pb"><div class="vpwrap" id="vp-wrap"></div><div style="font-weight:700;font-size:1rem;margin-bottom:.4rem" id="vp-ti"></div><div style="font-size:.78rem;color:var(--tx2);margin-bottom:.5rem" id="vp-d"></div><div style="font-size:.78rem;color:var(--tx3)" id="vp-m"></div></div>
+    </div>
+    <!-- PROFILE -->
+    <div id="p-profile" class="pg">
+      <div class="ph"><span class="pt">プロフィール</span><button class="bs bg" onclick="goBack()">← 戻る</button></div>
+      <div class="pb"><div id="prf-h"></div><div id="prf-tabs" style="margin-bottom:.7rem"></div><div class="grid" id="prf-items"></div></div>
+    </div>
+    <!-- DM -->
+    <div id="p-dm" class="pg">
+      <div class="dml">
+        <div class="dmlist" id="dmlist"></div>
+        <div class="dmchat">
+          <div class="dmchd" id="dmchd"><span style="color:var(--tx3);font-size:.82rem">会話相手を選んでください</span></div>
+          <div class="dmmsgs" id="dmmsgs"><div class="dmemp">相手を選んでメッセージを送ろう 💬</div></div>
+          <div class="dminp" id="dm-inp-area" style="display:none"><input type="text" id="dm-inp" placeholder="メッセージを入力..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="bs ba" onclick="sendMsg()">送信</button></div>
+        </div>
+      </div>
+    </div>
+    <!-- REQUESTS -->
+    <div id="p-requests" class="pg">
+      <div class="ph"><span class="pt">📩 リクエスト</span></div>
+      <div class="pb" id="rq-b"></div>
+    </div>
+    <!-- NOTICES -->
+    <div id="p-notices" class="pg">
+      <div class="ph"><span class="pt">📢 お知らせ</span></div>
+      <div class="pb" id="nt-b"></div>
+    </div>
+    <!-- SETTINGS -->
+    <div id="p-settings" class="pg">
+      <div class="ph"><span class="pt">⚙️ 設定・連携</span></div>
+      <div class="pb" id="set-b"></div>
+    </div>
+    <!-- ADMIN -->
+    <div id="p-admin" class="pg">
+      <div class="ph"><span class="pt">🛡 管理パネル</span></div>
+      <div class="pb">
+        <div class="atabs2">
+          <button class="atab2 on" onclick="swAdm('users')">ユーザー管理</button>
+          <button class="atab2" onclick="swAdm('games')">全ゲーム</button>
+          <button class="atab2" onclick="swAdm('videos')">全動画</button>
+          <button class="atab2" onclick="swAdm('search')">アカウント検索</button>
+          <button class="atab2" onclick="swAdm('notice')">お知らせ投稿</button>
+          <button class="atab2" onclick="swAdm('maintenance')" style="border-color:#f59e0b;color:#f59e0b">🔧 メンテナンス</button>
+        </div>
+        <div id="adm-c"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="mov" id="m-create"><div class="modal"><div class="mtitle">✨ 新規プロジェクト作成</div>
+  <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
+  <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
+  <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
+  <div class="fg"><label>言語・モードを選択</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
+      <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🌐</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
+      </button>
+      <button class="lang-opt" data-lang="python" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🐍</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
+      <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
+        <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
+      </label>
+    </div>
+    <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
+      ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
+    </div>
+  </div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
+</div></div>
+
+<div class="mov" id="m-deploy"><div class="modal"><div class="mtitle">🚀 デプロイ確認</div>
+  <p style="font-size:.82rem;color:var(--tx2);line-height:1.7">現在のコードを公開します。タイムラインに表示されます。</p>
+  <div id="dep-i" style="margin-top:.6rem;font-size:.76rem;color:var(--tx3)"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-deploy')">キャンセル</button><button class="bs ba" onclick="confirmDeploy()">🚀 公開する</button></div>
+</div></div>
+
+<div class="mov" id="m-source"><div class="modal wide"><div class="mtitle">💻 ソースコード</div>
+  <div id="src-c"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-source')">閉じる</button></div>
+</div></div>
+
+<div class="mov" id="m-warn"><div class="modal"><div class="mtitle">⚠ 警告カード発行</div>
+  <div id="warn-c"></div>
+</div></div>
+
+<div class="mov" id="m-upload"><div class="modal"><div class="mtitle">🎬 動画を投稿</div>
+  <div class="fg"><label>タイトル</label><input class="inp" type="text" id="up-t" placeholder="動画タイトル..."></div>
+  <div class="fg"><label>説明</label><textarea class="inp" id="up-d" rows="2"></textarea></div>
+  <div class="fg"><label>動画ファイル（mp4推奨）</label><input type="file" id="up-f" accept="video/*" style="color:var(--tx);font-size:.82rem"></div>
+  <div id="up-prog" style="display:none;margin-top:.5rem">
+    <div style="background:var(--bg4);border-radius:4px;height:6px"><div id="up-bar" style="background:var(--accent);height:100%;border-radius:4px;width:0%;transition:.3s"></div></div>
+    <div style="font-size:.72rem;color:var(--tx3);margin-top:.3rem" id="up-msg">アップロード中...</div>
+  </div>
+  <div class="ferr" id="up-e"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-upload')">キャンセル</button><button class="bs ba" id="btn-up" onclick="handleUpload()">アップロード</button></div>
+</div></div>
+
+<div class="mov" id="m-request"><div class="modal"><div class="mtitle">📩 リクエストを送る</div>
+  <p style="font-size:.82rem;color:var(--tx2);margin-bottom:.7rem" id="rq-tn"></p>
+  <div class="fg"><label>どんなものを作って欲しいか</label><textarea class="inp" id="rq-msg" rows="4" placeholder="内容を詳しく書いてください..."></textarea></div>
+  <div class="ferr" id="rq-e"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-request')">キャンセル</button><button class="bs ba" onclick="submitRq()">送信</button></div>
+</div></div>
+
+<div class="mov" id="m-switch"><div class="modal">
+  <div class="mtitle">⇄ アカウント切り替え</div>
+  <div id="switch-list" style="margin-bottom:.8rem"></div>
+  <div style="font-size:.78rem;color:var(--tx3);margin-bottom:.6rem">別のアカウントでログイン</div>
+  <div class="fg"><label>ユーザー名</label><input class="inp" type="text" id="sw-u" placeholder="username" autocomplete="off"></div>
+  <div class="fg"><label>パスワード</label><input class="inp" type="password" id="sw-p" placeholder="••••••••"></div>
+  <div class="ferr" id="sw-e"></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-switch')">閉じる</button><button class="bs ba" onclick="switchLogin()">このアカウントで切り替え</button></div>
+</div></div>
+
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>
+// ════════════════════════════════════════════
+//  ★ここを自分のSupabaseの値に書き換える★
+// ════════════════════════════════════════════
+const SUPA_URL = 'https://llgvqnzgahabvsfbadwk.supabase.co';
+const SUPA_KEY = 'sb_publishable_kwSxcYoRg5nYMruBMr-ciQ_ONnaCQH7';
+// ════════════════════════════════════════════
+
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+// ── State ────────────────────────────────────
+let ME = null;
+let edGID = null, curAu = null, curDMP = null, curDMPAv = null;
+let tlOff = 0, tlQ = '', vidOff = 0, vidQ = '';
+let editors = {}, edFiles = {}, activeTab = null, saveTimer = null;
+let pageStack = [], curPage = 'timeline';
+let admTab = 'users', rqTarget = null;
+let dmSub = null;
+
+// ── Utils ────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fd = s => { if(!s) return '-'; const d=new Date(s); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; };
+const ft = s => { if(!s) return ''; const d=new Date(s); return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const dbounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+const dbTL = dbounce(v => { tlQ=v; tlOff=0; $('tl-grid').innerHTML=''; loadTL(); }, 350);
+const dbVid = dbounce(v => { vidQ=v; vidOff=0; $('vg').innerHTML=''; loadVids(); }, 350);
+function toast(msg, type='i') { const el=document.createElement('div'); el.className=`toast t${type}`; el.textContent=msg; $('toasts').appendChild(el); setTimeout(()=>el.remove(),3200); }
+function openM(id) { $(id).classList.add('on'); if(id==='m-switch')renderSwitchModal(); }
+function closeM(id) { $(id).classList.remove('on'); }
+document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');}));
+
+// ── Nav ──────────────────────────────────────
+function go(page, data=null) {
+  if(page !== curPage) pageStack.push(curPage);
+  if(curPage==='editor'&&page!=='editor'){
+    const p=document.getElementById('db-live-panel');if(p)p.remove();
+    if(dbWatcher){sb.removeChannel(dbWatcher);dbWatcher=null;}
+  }
+  curPage = page;
+  document.querySelectorAll('.pg').forEach(p => { p.classList.toggle('on', p.id===`p-${page}`); p.style.display=''; });
+  document.querySelectorAll('.ni').forEach(n => n.classList.toggle('on', n.dataset.p===page));
+  if(page==='timeline'){tlOff=0;loadTL();}
+  if(page==='videos'){vidOff=0;loadVids();}
+  if(page==='my-games') loadMG();
+  if(page==='dm') loadDMList();
+  if(page==='requests') loadRQ();
+  if(page==='notices') loadNotices();
+  if(page==='settings') loadSettings();
+  if(page==='admin') loadAdmin();
+  if(page==='editor' && data) openEditor(data);
+  if(page==='play' && data) { openGameUrl(data); return; }
+}
+function goBack() { const p=pageStack.pop(); go(p||'timeline'); }
+
+// ════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════
+// ── パスワードハッシュ（SHA-256） ──
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  $('avs').addEventListener('click', e => {
+    const o=e.target.closest('.avo'); if(!o)return;
+    document.querySelectorAll('.avo').forEach(x=>x.classList.remove('on')); o.classList.add('on');
+  });
+  $('li-p').addEventListener('keydown', e => e.key==='Enter' && authLogin());
+  $('li-u').addEventListener('keydown', e => e.key==='Enter' && $('li-p').focus());
+  $('re-p').addEventListener('keydown', e => e.key==='Enter' && authRegister());
+
+  // 専用ゲームURLチェック
+  if (await checkGameUrl()) return;
+
+  // メンテナンスチェック（ログイン前）
+  await checkMaintenance();
+
+  // ローカルに保存されたセッションを復元
+  const saved = localStorage.getItem('ds_session');
+  if (saved) {
+    try {
+      const prof = JSON.parse(saved);
+      // DBから最新プロフィールを取得して確認
+      const { data } = await sb.from('profiles').select('*').eq('id', prof.id).single();
+      if (data) { ME = data; applyUser(); showScr('main'); go('timeline'); loadBadges(); }
+      else localStorage.removeItem('ds_session');
+    } catch(_) { localStorage.removeItem('ds_session'); }
+  }
+});
+
+async function checkMaintenance() {
+  try {
+    const res = await sb.from('settings').select('value,message').eq('key','maintenance').maybeSingle();
+    if (!res || !res.data || res.data.value !== 'true') return;
+    const msg = res.data.message || 'ただいまメンテナンス中です。しばらくお待ちください。';
+    const el = document.getElementById('s-auth');
+    if (!el) return;
+    el.innerHTML =
+      '<div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>'
+      +'<div style="position:relative;z-index:1;text-align:center;padding:2rem;max-width:500px;width:100%">'
+      +'<div style="font-size:4rem;margin-bottom:1rem">🔧</div>'
+      +'<div style="font-family:var(--fh);font-size:1.5rem;color:var(--a3);margin-bottom:1rem">MAINTENANCE</div>'
+      +'<p style="color:var(--tx2);line-height:1.8;font-size:.9rem;margin-bottom:2rem">'+msg+'</p>'
+      +'<div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.5rem;text-align:left">'
+      +'<p style="font-size:.75rem;color:var(--tx3);margin-bottom:.8rem">管理者の方はこちら</p>'
+      +'<div class="fg"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username"></div>'
+      +'<div class="fg" style="margin-top:.5rem"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>'
+      +'<div class="ferr" id="li-err" style="min-height:1em;margin:.3rem 0"></div>'
+      +'<button class="btnp" onclick="authLoginAdmin()">管理者ログイン</button>'
+      +'</div></div>';
+    window._maintenanceMode = true;
+  } catch(e) { /* settingsテーブルなければ無視 */ }
+}
+
+async function authLoginAdmin() {
+  const uname=$('li-u').value.trim(), pw=$('li-p').value;
+  const err=$('li-err'); err.textContent='';
+  if(!uname||!pw){err.textContent='入力してください';return;}
+  const hashed = await hashPw(pw);
+  const { data: prof } = await sb.from('profiles').select('*').eq('username',uname).eq('pw_hash',hashed).single();
+  if(!prof){err.textContent='ユーザー名またはパスワードが違います';return;}
+  if(prof.role !== 'admin'){err.textContent='管理者のみアクセスできます';return;}
+  saveAccount(uname, prof.display_name, prof.avatar, null, pw);
+  await initUser(prof);
+}
+
+async function initUser(prof) {
+  ME = prof;
+  localStorage.setItem('ds_session', JSON.stringify({id: prof.id}));
+  applyUser();
+  showScr('main');
+  go('timeline');
+  loadBadges();
+}
+
+function applyUser() {
+  if(ME.avatar&&ME.avatar.startsWith('http')){$('sb-av').innerHTML=`<img src="${ME.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;}else{$('sb-av').textContent=ME.avatar||'🎮';}
+  $('sb-n').textContent = ME.display_name;
+  $('sb-r').textContent = ME.role==='admin'?'⚡ Admin':'Player';
+  $('ni-adm').style.display = ME.role==='admin' ? '' : 'none';
+  renderSavedAccounts();
+}
+
+function swATab(t) {
+  document.querySelectorAll('.atab').forEach((x,i)=>x.classList.toggle('on',(t==='li'&&i===0)||(t==='re'&&i===1)));
+  $('af-li').classList.toggle('on',t==='li');
+  $('af-re').classList.toggle('on',t==='re');
+}
+
+async function authLogin() {
+  const uname=$('li-u').value.trim(), pw=$('li-p').value;
+  const err=$('li-err'); err.textContent='';
+  if(!uname||!pw){err.textContent='入力してください';return;}
+  const b=$('btn-li'); b.disabled=true; b.textContent='...';
+
+  const hashed = await hashPw(pw);
+  const { data: prof } = await sb.from('profiles').select('*').eq('username', uname).eq('pw_hash', hashed).single();
+  if(!prof){err.textContent='ユーザー名またはパスワードが違います';b.disabled=false;b.textContent='ログイン';return;}
+
+  saveAccount(uname, prof.display_name, prof.avatar, null, pw);
+  await initUser(prof);
+  b.disabled=false; b.textContent='ログイン';
+}
+
+async function authRegister() {
+  const pw=$('re-p').value, name=$('re-n').value.trim(), uname=$('re-u').value.trim();
+  const av=document.querySelector('.avo.on')?.dataset.v||'🎮';
+  const err=$('re-err'); err.textContent='';
+  if(!pw||!name||!uname){err.textContent='全項目を入力してください';return;}
+  if(uname.length<2){err.textContent='ユーザー名は2文字以上';return;}
+  if(pw.length<6){err.textContent='パスワードは6文字以上';return;}
+  const { data: ex } = await sb.from('profiles').select('id').eq('username',uname).single();
+  if(ex){err.textContent='このユーザー名は既に使われています';return;}
+  const b=$('btn-re'); b.disabled=true; b.textContent='...';
+
+  const hashed = await hashPw(pw);
+  const newId = crypto.randomUUID();
+  const { data: prof, error } = await sb.from('profiles').insert({
+    id: newId, username: uname, display_name: name, avatar: av, pw_hash: hashed
+  }).select().single();
+  if(error){err.textContent=error.message;b.disabled=false;b.textContent='アカウント作成';return;}
+
+  saveAccount(uname, name, av, null, pw);
+  toast('アカウントを作成しました！','s');
+  await initUser(prof);
+  b.disabled=false; b.textContent='アカウント作成';
+}
+
+async function authLogout() {
+  if(dmSub) sb.removeChannel(dmSub);
+  ME=null;
+  localStorage.removeItem('ds_session');
+  showScr('auth');
+}
+
+// ── アカウント切り替え ──
+function getSavedAccounts(){try{return JSON.parse(localStorage.getItem('ds_accounts')||'[]');}catch(_){return[];}}
+function saveAccount(uname,displayName,avatar,email,pw){
+  const accounts=getSavedAccounts();
+  const idx=accounts.findIndex(a=>a.uname===uname);
+  const entry={uname,displayName,avatar,email,pw};
+  if(idx>=0)accounts[idx]=entry;else accounts.push(entry);
+  localStorage.setItem('ds_accounts',JSON.stringify(accounts));
+}
+function renderSavedAccounts(){
+  const accounts=getSavedAccounts();
+  const el=$('saved-accounts');if(!el)return;
+  if(!accounts.length){el.innerHTML='';return;}
+  el.innerHTML=accounts.map(a=>`
+    <div class="sw-chip${ME?.username===a.uname?' cur':''}" onclick="quickSwitch(this.dataset.u,this.dataset.e,this.dataset.p)" data-u="${a.uname}" data-e="${a.email}" data-p="${a.pw}">
+      <span style="font-size:1.1rem">${a.avatar||'🎮'}</span>
+      <span style="font-size:.78rem;font-weight:700;flex:1">${a.displayName}</span>
+      ${ME?.username===a.uname?'<span style="font-size:.65rem;color:var(--accent)">●</span>':''}
+    </div>`).join('');
+}
+function renderSwitchModal(){
+  const accounts=getSavedAccounts();
+  const el=$('switch-list');if(!el)return;
+  if(!accounts.length){el.innerHTML='<p style="font-size:.78rem;color:var(--tx3)">保存済みアカウントなし</p>';return;}
+  el.innerHTML=`<div style="font-size:.78rem;color:var(--tx2);margin-bottom:.4rem">保存済みアカウント</div>`+
+    accounts.map(a=>`
+      <div class="sw-chip${ME?.username===a.uname?' cur':''}" onclick="quickSwitch(this.dataset.u,this.dataset.e,this.dataset.p)" data-u="${a.uname}" data-e="${a.email}" data-p="${a.pw}">
+        <span style="font-size:1.1rem">${a.avatar||'🎮'}</span>
+        <div style="flex:1"><div style="font-size:.82rem;font-weight:700">${a.displayName}</div><div style="font-size:.7rem;color:var(--tx3)">@${a.uname}</div></div>
+        ${ME?.username===a.uname?'<span style="font-size:.7rem;color:var(--accent)">現在</span>':'<span style="font-size:.7rem;color:var(--tx3);cursor:pointer" onclick="removeAccount(event)">✕</span>'}
+      </div>`).join('');
+}
+function removeAccount(e){
+  const uname=e.target.closest('.sw-chip')?.dataset.u;
+  if(!uname)return;
+  e.stopPropagation();
+  const accounts=getSavedAccounts().filter(a=>a.uname!==uname);
+  localStorage.setItem('ds_accounts',JSON.stringify(accounts));
+  renderSavedAccounts();renderSwitchModal();
+}
+async function quickSwitch(uname,email,pw){
+  if(!uname||!pw){toast('切り替え情報が不正です','e');return;}
+  closeM('m-switch');
+  if(ME?.username===uname)return;
+  if(dmSub){sb.removeChannel(dmSub);dmSub=null;}
+  const hashed = await hashPw(pw);
+  const {data:prof}=await sb.from('profiles').select('*').eq('username',uname).eq('pw_hash',hashed).single();
+  if(!prof){toast('切り替えに失敗しました','e');return;}
+  await initUser(prof);
+  toast(`@${uname} に切り替えました`,'s');
+}
+async function switchLogin(){
+  const uname=$('sw-u').value.trim(),pw=$('sw-p').value;
+  const e=$('sw-e');e.textContent='';
+  if(!uname||!pw){e.textContent='入力してください';return;}
+  const hashed = await hashPw(pw);
+  const {data:prof}=await sb.from('profiles').select('*').eq('username',uname).eq('pw_hash',hashed).single();
+  if(!prof){e.textContent='ユーザー名またはパスワードが違います';return;}
+  if(dmSub){sb.removeChannel(dmSub);dmSub=null;}
+  saveAccount(uname,prof.display_name,prof.avatar,null,pw);
+  closeM('m-switch');
+  await initUser(prof);
+  toast(`@${uname} に切り替えました`,'s');
+}
+
+function showScr(n) { document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===`s-${n}`)); }
+
+// ════════════════════════════════════════════
+//  BADGES
+// ════════════════════════════════════════════
+async function loadBadges() {
+  if(!ME) return;
+  sb.from('dms').select('id',{count:'exact'}).eq('to_id',ME.id).eq('read',false).then(({count})=>{const b=$('dm-b');b.style.display=count>0?'':'none';b.textContent=count;});
+  sb.from('requests').select('id',{count:'exact'}).eq('to_id',ME.id).eq('status','pending').then(({count})=>{const b=$('rq-b');b.style.display=count>0?'':'none';});
+}
+
+// ════════════════════════════════════════════
+//  TIMELINE
+// ════════════════════════════════════════════
+const LIMIT = 12;
+async function loadTL() {
+  const grid=$('tl-grid');
+  if(tlOff===0) grid.innerHTML='<div style="padding:1rem;color:var(--tx3)"><div class="spin"></div></div>';
+  let q = sb.from('games').select(`id,title,description,author_id,author_name,author_avatar,plays,published_version,updated_at,profiles(username,avatar)`)
+    .eq('is_published',true).eq('flagged',false).order('updated_at',{ascending:false}).range(tlOff,tlOff+LIMIT-1);
+  if(tlQ){ const qv=`%${tlQ}%`; q=q.or(`title.ilike.${qv},description.ilike.${qv},author_name.ilike.${qv}`); }
+  const { data: games } = await q;
+  if(tlOff===0) grid.innerHTML='';
+  if(!games?.length && tlOff===0){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>'; return; }
+  games?.forEach(g => { grid.appendChild(mkCard(g)); loadReactions(g.id); });
+  tlOff += games?.length||0;
+  $('tl-more').style.display = games?.length===LIMIT ? '' : 'none';
+}
+function loadMoreTL(){ loadTL(); }
+
+const EMOJIS=['👍','❤️','🔥','⭐','😂','😮'];
+function mkCard(g){
+  const el=document.createElement('div'); el.className='card'; el.dataset.id=g.id;
+  const rH=EMOJIS.map(e=>`<button class="rbtn" id="rc-${g.id}-${e.codePointAt(0)}" onclick="doReact('${g.id}','${e}')">${e} <span>0</span></button>`).join('');
+  const avHtml=g.author_avatar&&g.author_avatar.startsWith('http')?`<img src="${g.author_avatar}" style="width:100%;height:100%;object-fit:cover">`:g.author_avatar||'🎮';
+  el.innerHTML=`<div class="cthumb" onclick="openGameUrl('${g.id}')" style="${g.author_avatar&&g.author_avatar.startsWith('http')?'padding:0;overflow:hidden':''}">${avHtml}</div>
+    <div class="cbody" onclick="openGameUrl('${g.id}')">
+      <div class="ctitle">${esc(g.title)}</div>
+      <div class="cdesc">${esc(g.description||'')}</div>
+      <div class="cmeta">
+        <span class="cauthor" onclick="event.stopPropagation();showProfile('${g.author_id}')">${g.author_avatar||'🎮'} ${esc(g.author_name)}</span>
+        <div class="cstats"><span>👁 ${g.plays||0}</span><span>v${g.published_version||1}</span></div>
+      </div>
+    </div>
+    <div class="cfoot">${rH}</div>`;
+  return el;
+}
+async function loadReactions(gid){
+  const [{ data: counts }, { data: mine }] = await Promise.all([
+    sb.from('reactions').select('emoji').eq('game_id',gid),
+    ME ? sb.from('reactions').select('emoji').eq('game_id',gid).eq('user_id',ME.id).single() : Promise.resolve({data:null})
+  ]);
+  const c={};EMOJIS.forEach(e=>c[e]=0);(counts||[]).forEach(r=>{if(c[r.emoji]!==undefined)c[r.emoji]++;});
+  EMOJIS.forEach(e=>{const b=document.getElementById(`rc-${gid}-${e.codePointAt(0)}`);if(!b)return;b.querySelector('span').textContent=c[e];b.classList.toggle('on',mine?.emoji===e);});
+}
+async function doReact(gid,emoji){
+  if(!ME){toast('ログインが必要です','e');return;}
+  const { data: ex } = await sb.from('reactions').select('emoji').eq('game_id',gid).eq('user_id',ME.id).single();
+  if(ex?.emoji===emoji){ await sb.from('reactions').delete().eq('game_id',gid).eq('user_id',ME.id); }
+  else if(ex){ await sb.from('reactions').update({emoji}).eq('game_id',gid).eq('user_id',ME.id); }
+  else{ await sb.from('reactions').insert({game_id:gid,user_id:ME.id,emoji}); }
+  loadReactions(gid);
+}
+
+// ════════════════════════════════════════════
+//  VIDEOS
+// ════════════════════════════════════════════
+async function loadVids(){
+  const grid=$('vg');
+  if(vidOff===0) grid.innerHTML='<div style="padding:1rem;color:var(--tx3)"><div class="spin"></div></div>';
+  let q=sb.from('videos').select('*').eq('flagged',false).order('created_at',{ascending:false}).range(vidOff,vidOff+LIMIT-1);
+  if(vidQ){q=q.ilike('title',`%${vidQ}%`);}
+  const { data: vids } = await q;
+  if(vidOff===0) grid.innerHTML='';
+  if(!vids?.length&&vidOff===0){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🎬</div><div class="et">まだ動画がありません</div><button class="bs ba" onclick="openUM()" style="margin-top:.8rem">最初の動画を投稿</button></div>';return;}
+  vids?.forEach(v=>grid.appendChild(mkVCard(v)));
+  vidOff+=vids?.length||0;
+  $('vg-more').style.display=vids?.length===LIMIT?'':'none';
+}
+function loadMoreVid(){ loadVids(); }
+function mkVCard(v){
+  const el=document.createElement('div');el.className='vc';
+  el.innerHTML=`<div class="vthumb" onclick="openVid('${v.id}','${v.storage_path||''}')">🎬</div>
+    <div class="vbody"><div class="vtitle">${esc(v.title)}</div><div style="font-size:.76rem;color:var(--tx2);margin-top:.18rem">${esc(v.description||'')}</div>
+    <div class="vmeta"><span class="vauth" onclick="showProfile('${v.author_id}')">${v.author_avatar||'🎮'} ${esc(v.author_name)}</span><span style="margin-left:auto">👁 ${v.views||0}</span></div></div>`;
+  return el;
+}
+async function openVid(vid,path){
+  go('vidplay');
+  const { data: v } = await sb.from('videos').select('*').eq('id',vid).single();
+  if(!v) return;
+  $('vp-t').textContent=v.title;$('vp-ti').textContent=v.title;$('vp-d').textContent=v.description||'';
+  $('vp-m').innerHTML=`<span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${v.author_id}')">${v.author_avatar||'🎮'} ${esc(v.author_name)}</span> &nbsp;👁 ${v.views||0}`;
+  if(v.storage_path){
+    const { data: url } = sb.storage.from('videos').getPublicUrl(v.storage_path);
+    $('vp-wrap').innerHTML=`<video controls autoplay><source src="${url.publicUrl}" type="video/mp4"></video>`;
+  }
+  sb.from('videos').update({views:(v.views||0)+1}).eq('id',vid);
+}
+function openUM(){$('up-t').value='';$('up-d').value='';$('up-f').value='';$('up-e').textContent='';$('up-prog').style.display='none';openM('m-upload');}
+async function handleUpload(){
+  const title=$('up-t').value.trim(),desc=$('up-d').value,file=$('up-f').files[0];
+  const e=$('up-e');e.textContent='';
+  if(!title){e.textContent='タイトルを入力してください';return;}
+  if(!file){e.textContent='ファイルを選択してください';return;}
+  if(file.size>200*1024*1024){e.textContent='200MB以下のファイルを選択してください';return;}
+  $('up-prog').style.display='';$('btn-up').disabled=true;$('up-msg').textContent='アップロード中...';$('up-bar').style.width='10%';
+  const path=`${ME.id}/${uid()}_${file.name}`;
+  const { error: se } = await sb.storage.from('videos').upload(path,file,{contentType:file.type});
+  if(se){e.textContent='ストレージエラー: '+se.message;$('btn-up').disabled=false;return;}
+  $('up-bar').style.width='80%';
+  const vid={id:'v_'+uid(),title,description:desc,author_id:ME.id,author_name:ME.display_name,author_avatar:ME.avatar||'🎮',storage_path:path};
+  await sb.from('videos').insert(vid);
+  $('up-bar').style.width='100%';
+  toast('動画をアップロードしました！','s');closeM('m-upload');$('btn-up').disabled=false;
+  vidOff=0;loadVids();
+}
+
+// ════════════════════════════════════════════
+//  MY GAMES
+// ════════════════════════════════════════════
+async function loadMG(){
+  const body=$('mg-b');body.innerHTML='<div class="spin"></div>';
+  const { data: games } = await sb.from('games').select('*').eq('author_id',ME.id).order('updated_at',{ascending:false});
+  body.innerHTML='';
+  if(!games?.length){body.innerHTML='<div class="empty"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>';return;}
+  games.forEach(g=>{
+    const row=document.createElement('div');row.className='mrow';
+    const badge=g.is_published?`<span class="bdg bg-g">● 公開中 v${g.published_version}</span>`:g.flagged?`<span class="bdg bg-r">⚠ 通報済</span>`:`<span class="bdg bg-x">○ 下書き</span>`;
+    row.innerHTML=`<div class="minfo"><div class="mtitle">${esc(g.title)}</div><div class="mmeta">${badge} &nbsp;👁 ${g.plays||0} &nbsp;${fd(g.updated_at)}</div></div>
+      <button class="bs bg" onclick="openGameUrl('${g.id}')">▶</button>
+      <button class="bs ba" onclick="go('editor','${g.id}')">✏️ 編集</button>`;
+    body.appendChild(row);
+  });
+}
+
+// ════════════════════════════════════════════
+//  CREATE / EDITOR
+// ════════════════════════════════════════════
+function openCM(){$('nc-t').value='';$('nc-d').value='';$('nc-h').value='';openM('m-create');}
+function selLang(el){document.querySelectorAll('.lang-opt').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
+document.addEventListener('DOMContentLoaded',()=>{const cb=document.getElementById('nc-db');if(cb)cb.addEventListener('change',()=>{const d=document.getElementById('db-desc');if(d)d.style.display=cb.checked?'':'none';});});
+
+async function handleCreate(){
+  const title=$('nc-t').value.trim()||'無題のプロジェクト';
+  const lang=document.querySelector('.lang-opt.on')?.dataset.lang||'html';
+  const useDb=$('nc-db')?.checked||false;
+  const id='g_'+uid();
+  let html='',css='',js='';
+  if(lang==='html'){
+    html='<div id="game">\n  <h1>🎮 My Game</h1>\n  <p>ゲームをここに作ろう！</p>\n  <button onclick="start()">スタート</button>\n</div>';
+    css='body{margin:0;background:#0f0f1a;color:#e0e0ff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}\n#game{text-align:center;padding:2rem}\nbutton{padding:.8rem 2rem;background:#6c63ff;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer}';
+    js=useDb?`// GF リアルタイムDBの使い方:\n// await GF.set('score', 100);  // 保存\n// const v = await GF.get('score');  // 取得\n// GF.watch('score', v => console.log(v));  // リアルタイム監視\n\nfunction start(){\n  alert("ゲームスタート！");\n}`:`function start(){\n  alert("ゲームスタート！");\n}`;
+  } else {
+    html='';css='';
+    js=useDb?`# GF リアルタイムDBの使い方:\n# await GF.set('score', 100)\n# value = await GF.get('score')\n\nprint("Hello, D·STUDIO!")\nprint("Pythonが動いています！")`:`print("Hello, D·STUDIO!")\nprint("Pythonが動いています！")`;
+  }
+  const { error } = await sb.from('games').insert({
+    id,title,description:$('nc-d').value,how_to_play:$('nc-h').value,
+    author_id:ME.id,author_name:ME.display_name,author_avatar:ME.avatar||'🎮',
+    html,css,js,lang,use_db:useDb
+  });
+  if(error){toast(error.message,'e');return;}
+  closeM('m-create');toast('プロジェクトを作成しました！','s');go('editor',id);
+}
+
+let currentLang='html', currentUseDb=false;
+let pyodideReady=false, pyodideLoading=false, pyodideInstance=null;
+
+async function openEditor(gid){
+  edGID=gid;
+  const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
+  if(!g){toast('ゲームが見つかりません','e');return;}
+  currentLang=g.lang||'html'; currentUseDb=g.use_db||false;
+  $('ed-t').value=g.title;$('ed-d').value=g.description||'';$('ed-h').value=g.how_to_play||'';
+  $('ed-vi').textContent=g.is_published?`公開: v${g.published_version}`:'未公開';
+
+  if(currentLang==='python'){
+    setupPythonEditor(g);
+  } else {
+    edFiles={html:{name:'index.html',mode:'htmlmixed',content:g.html||''},css:{name:'style.css',mode:'css',content:g.css||''},js:{name:'script.js',mode:'javascript',content:g.js||''}};
+    const files=g.files||{};Object.entries(files).forEach(([k,v])=>edFiles[k]=v);
+    renderTabs();switchTab('html');renderVH(g.versions||[]);setSst('s');refreshPV();
+  }
+  if(currentUseDb) setupDbPanel(gid);
+}
+
+function setupPythonEditor(g){
+  edFiles={py:{name:'main.py',mode:'python',content:g.js||'print("Hello!")'} };
+  renderTabs();switchTab('py');
+  $('pv-frame').style.display='none';
+  let pvwrap=$('pv-frame').parentElement;
+  if(!document.getElementById('py-area')){
+    pvwrap.innerHTML=`
+      <div style="display:flex;flex-direction:column;height:100%;background:var(--bg2)">
+        <div style="padding:.5rem .8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+          <span style="font-size:.73rem;font-weight:700;color:var(--tx2);font-family:var(--fm)">🐍 Python出力</span>
+          <button class="bs ba" id="btn-run-py" onclick="runPython()" style="margin-left:auto">▶ 実行</button>
+          <button class="bs bg" onclick="clearPyOut()" style="font-size:.7rem">クリア</button>
+          <span id="py-status" style="font-size:.7rem;color:var(--tx3)"></span>
+        </div>
+        <div class="pyout" id="py-out" style="flex:1;margin:0;border-radius:0"><span style="color:var(--tx3)">▶ 実行 ボタンを押すとPythonが動きます</span></div>
+        ${currentUseDb?'<div id="db-panel-py" style="flex-shrink:0"></div>':''}
+      </div>`;
+  }
+}
+
+async function runPython(){
+  const btn=$('btn-run-py');const status=$('py-status');const out=$('py-out');
+  if(!btn||!out)return;
+  btn.disabled=true;
+  if(!pyodideReady){
+    status.textContent='Pyodide読み込み中...（初回のみ時間がかかります）';
+    out.innerHTML='<span style="color:var(--accent3)">🐍 Pythonエンジンを起動中...</span>';
+    if(!pyodideLoading){
+      pyodideLoading=true;
+      try{
+        pyodideInstance=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'});
+        pyodideReady=true;status.textContent='✅ 準備完了';
+      }catch(e){out.innerHTML=`<span class="py-err">Pyodide読み込みエラー: ${e.message}</span>`;btn.disabled=false;return;}
+    }
+  }
+  const code=editors['py']?editors['py'].getValue():(edFiles.py?.content||'');
+  out.innerHTML='';
+  try{
+    await pyodideInstance.runPythonAsync(`
+import sys
+from io import StringIO
+_buf=StringIO()
+sys.stdout=_buf
+sys.stderr=_buf
+`);
+    await pyodideInstance.runPythonAsync(code);
+    const result=await pyodideInstance.runPythonAsync('_buf.getvalue()');
+    const lines=(result||'').split('\n');
+    out.innerHTML=lines.map(l=>`<span class="py-out">${esc(l)}</span>`).join('\n')||'<span style="color:var(--tx3)">(出力なし)</span>';
+  }catch(e){
+    const errText=String(e).replace(/Error: /,'');
+    out.innerHTML+=`<span class="py-err">\n❌ ${esc(errText)}</span>`;
+  }
+  status.textContent='';btn.disabled=false;
+}
+function clearPyOut(){const o=$('py-out');if(o)o.innerHTML='';}
+
+let dbWatcher=null;
+async function setupDbPanel(gid){
+  const existingPanel=document.getElementById('db-live-panel');
+  if(existingPanel)existingPanel.remove();
+  const panel=document.createElement('div');
+  panel.id='db-live-panel';panel.className='db-panel';
+  panel.style.cssText='position:fixed;bottom:1rem;right:1rem;width:280px;z-index:50;max-height:200px;overflow-y:auto';
+  panel.innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem"><span style="font-size:.78rem;font-weight:700;color:var(--accent)">🗄️ リアルタイムDB</span><button class="bs bg" onclick="this.closest('#db-live-panel').remove()" style="font-size:.65rem;margin-left:auto">✕</button></div><div id="db-rows"><span style="font-size:.75rem;color:var(--tx3)">データなし</span></div>`;
+  document.body.appendChild(panel);
+  if(dbWatcher)sb.removeChannel(dbWatcher);
+  loadDbData(gid);
+  dbWatcher=sb.channel('db-'+gid).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`game_id=eq.${gid}`},()=>loadDbData(gid)).subscribe();
+  window.GF={
+    set:async(k,v)=>{await sb.from('game_db').upsert({game_id:gid,key:k,value:String(v)},{onConflict:'game_id,key'});return v;},
+    get:async(k)=>{const {data}=await sb.from('game_db').select('value').eq('game_id',gid).eq('key',k).single();return data?.value??null;},
+    watch:(k,cb)=>{sb.channel('gfdb-'+k).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`key=eq.${k}`},p=>cb(p.new?.value)).subscribe();},
+    delete:async(k)=>{await sb.from('game_db').delete().eq('game_id',gid).eq('key',k);}
+  };
+  window.GF_set=async(k,v)=>window.GF.set(k,v);
+  window.GF_get=async(k)=>window.GF.get(k);
+}
+async function loadDbData(gid){
+  const {data}=await sb.from('game_db').select('key,value').eq('game_id',gid).order('key');
+  const rows=$('db-rows');if(!rows)return;
+  if(!data?.length){rows.innerHTML='<span style="font-size:.75rem;color:var(--tx3)">データなし</span>';return;}
+  rows.innerHTML=data.map(r=>`<div class="db-row"><span class="db-key">${esc(r.key)}</span><span class="db-val">${esc(r.value)}</span><button onclick="GF.delete('${esc(r.key)}').then(()=>loadDbData('${gid}'))" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:.7rem">✕</button></div>`).join('');
+}
+
+function renderTabs(){
+  const bar=$('ed-tabs');bar.innerHTML='';const fixed=['html','css','js'];
+  Object.entries(edFiles).forEach(([id,f])=>{
+    const t=document.createElement('button');t.className='etab'+(id===activeTab?' on':'');t.dataset.id=id;
+    const del=!fixed.includes(id);
+    t.innerHTML=`${esc(f.name)}${del?`<span class="tc" onclick="rmTab(event,'${id}')">✕</span>`:''}`;
+    t.onclick=e=>{if(!e.target.classList.contains('tc'))switchTab(id);};bar.appendChild(t);
+  });
+  const add=document.createElement('button');add.className='tadd';add.textContent='+';add.title='ファイルを追加';add.onclick=addTab;bar.appendChild(add);
+}
+function switchTab(id){
+  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+  activeTab=id;document.querySelectorAll('.etab').forEach(t=>t.classList.toggle('on',t.dataset.id===id));
+  const pane=$('ed-pane');pane.innerHTML='';const ta=document.createElement('textarea');pane.appendChild(ta);
+  if(editors[id])editors[id].toTextArea();
+  const f=edFiles[id];
+  editors[id]=CodeMirror.fromTextArea(ta,{mode:f.mode,theme:'dracula',lineNumbers:true,autoCloseTags:true,autoCloseBrackets:true,tabSize:2,indentWithTabs:false});
+  editors[id].setValue(f.content||'');editors[id].on('change',()=>{schedSave();checkErrors();});
+  setTimeout(()=>{editors[id].refresh();checkErrors();},80);
+}
+function addTab(){const name=prompt('ファイル名（例: game2.html）');if(!name)return;const ext=name.split('.').pop().toLowerCase();const modes={html:'htmlmixed',css:'css',js:'javascript'};const id='f_'+uid();edFiles[id]={name,mode:modes[ext]||'htmlmixed',content:''};renderTabs();switchTab(id);}
+function rmTab(e,id){e.stopPropagation();if(!confirm(`"${edFiles[id].name}" を削除しますか？`))return;delete edFiles[id];if(editors[id]){editors[id].toTextArea();delete editors[id];}if(activeTab===id){activeTab=null;switchTab(Object.keys(edFiles)[0]);}renderTabs();schedSave();}
+function checkErrors(){
+  const ov=$('erov'),el=$('erl');const errs=[];
+  if(activeTab&&editors[activeTab]){
+    const val=editors[activeTab].getValue(),mode=edFiles[activeTab]?.mode;
+    if(mode==='javascript'){try{new Function(val);}catch(e){errs.push(`JS: ${e.message}`);}}
+    if(mode==='css'){const o=(val.match(/{/g)||[]).length,c=(val.match(/}/g)||[]).length;if(o!==c)errs.push(`CSS: 波括弧不一致 ({:${o} }:${c})`);}
+  }
+  ov.classList.toggle('hide',!errs.length);el.innerHTML=errs.map(e=>`<div class="erl">${esc(e)}</div>`).join('');
+}
+function refreshPV(){
+  if(currentLang==='python') return;
+  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+  const h=edFiles.html?.content||'',c=edFiles.css?.content||'',j=edFiles.js?.content||'';
+  let ex='';Object.entries(edFiles).forEach(([k,f])=>{if(['html','css','js'].includes(k))return;if(f.mode==='css')ex+=`<style>${f.content}</style>`;else if(f.mode==='javascript')ex+=`<script>${f.content}<\/script>`;else ex+=f.content;});
+  const gfBridge=currentUseDb&&edGID?`<script>
+    window.GF={
+      set:(k,v)=>window.parent.GF.set(k,v),
+      get:(k)=>window.parent.GF.get(k),
+      watch:(k,cb)=>window.parent.GF.watch(k,cb),
+      delete:(k)=>window.parent.GF.delete(k)
+    };
+  <\/script>`:'';
+  $('pv-frame').srcdoc=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${c}</style></head><body>${h}${ex}${gfBridge}<script>window.onerror=function(m,s,l){window.parent.postMessage({type:'gf-e',msg:m,line:l},'*');};${j}<\/script></body></html>`;
+}
+window.addEventListener('message',e=>{if(e.data?.type==='gf-e'){const ov=$('erov'),el=$('erl');ov.classList.remove('hide');const d=document.createElement('div');d.className='erl';d.textContent=`⚠ L${e.data.line}: ${e.data.msg}`;el.appendChild(d);}});
+function schedSave(){setSst('w');refreshPV();clearTimeout(saveTimer);saveTimer=setTimeout(doSave,1200);}
+function setSst(s){const el=$('sst');el.className='sst '+s;el.textContent=s==='s'?'● 保存済':s==='w'?'● 保存中...':'● エラー';}
+async function doSave(){
+  if(!edGID)return;
+  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+  let updateData={title:$('ed-t').value,description:$('ed-d').value,how_to_play:$('ed-h').value,updated_at:new Date().toISOString()};
+  if(currentLang==='python'){
+    updateData.js=edFiles.py?.content||'';
+  } else {
+    const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
+    updateData={...updateData,html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,files:ex};
+  }
+  const { error } = await sb.from('games').update(updateData).eq('id',edGID);
+  setSst(error?'e':'s');
+}
+async function handleDeploy(){await doSave();const { data: g } = await sb.from('games').select('current_version').eq('id',edGID).single();$('dep-i').textContent=`現在: v${g?.current_version||0} → v${(g?.current_version||0)+1} として公開`;openM('m-deploy');}
+async function confirmDeploy(){
+  closeM('m-deploy');
+  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+  const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
+  const { data: g } = await sb.from('games').select('*').eq('id',edGID).single();
+  const newVer=(g.current_version||0)+1;
+  const ver={version:newVer,html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,files:ex,title:$('ed-t').value,deployedAt:new Date().toISOString()};
+  const versions=[...(g.versions||[]),ver];
+  await sb.from('games').update({is_published:true,published_version:newVer,current_version:newVer,versions,updated_at:new Date().toISOString()}).eq('id',edGID);
+  toast(`🚀 v${newVer} として公開しました！`,'s');$('ed-vi').textContent=`公開: v${newVer}`;
+}
+function toggleVH(){const v=$('vlist');v.style.display=v.style.display==='none'?'':'none';}
+function renderVH(vers){const vl=$('vlist');vl.innerHTML='';if(!vers.length){vl.innerHTML='<div style="font-size:.7rem;color:var(--tx3)">まだ公開履歴がありません</div>';return;}[...vers].reverse().forEach(v=>{const r=document.createElement('div');r.className='vrow';r.innerHTML=`<span class="vnum">v${v.version}</span><span class="vdate">${fd(v.deployedAt)}</span><button class="vrest" onclick='restoreV(${JSON.stringify(v)})'>復元</button>`;vl.appendChild(r);});}
+function restoreV(v){if(!confirm(`v${v.version} を復元しますか？`))return;edFiles.html={...edFiles.html,content:v.html};edFiles.css={...edFiles.css,content:v.css};edFiles.js={...edFiles.js,content:v.js};if(v.files)Object.entries(v.files).forEach(([k,f])=>edFiles[k]=f);switchTab(activeTab);toast(`v${v.version} を復元しました`,'s');schedSave();}
+
+// ════════════════════════════════════════════
+//  PLAY
+// ════════════════════════════════════════════
+// ── ゲーム専用URL ──
+function openGameUrl(gid) {
+  if (!gid) return;
+  const url = window.location.href.split('?')[0] + '?game=' + gid;
+  window.location.href = url;
+}
+
+// ── 全画面プレイモード（?game=xxx でアクセスしたとき） ──
+async function checkGameUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const gid = params.get('game');
+  if (!gid) return false;
+
+  // 全画面プレイUIを表示
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100vh;background:#000;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:#0d1117;border-bottom:2px solid #e94560;flex-shrink:0">
+        <button onclick="window.location.href=window.location.href.split('?')[0]"
+          style="padding:6px 14px;background:#333;border:1px solid #555;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;font-weight:700">
+          ← D·STUDIOに戻る
+        </button>
+        <span id="game-title" style="font-size:13px;font-weight:700;color:#e94560">読み込み中...</span>
+        <span style="flex:1"></span>
+        <span id="game-meta" style="font-size:11px;color:#666"></span>
+      </div>
+      <div style="flex:1;position:relative;overflow:hidden">
+        <iframe id="full-frame"
+          style="width:100%;height:100%;border:none;background:#fff"
+          sandbox="allow-scripts allow-same-origin allow-forms">
+        </iframe>
+      </div>
+      <div style="padding:6px 14px;background:#0d1117;border-top:1px solid #1e293b;display:flex;gap:8px;align-items:center;flex-shrink:0" id="react-bar">
+        <span style="font-size:11px;color:#666">読み込み中...</span>
+      </div>
+    </div>`;
+
+  const sb2 = supabase.createClient('https://llgvqnzgahabvsfbadwk.supabase.co', 'sb_publishable_kwSxcYoRg5nYMruBMr-ciQ_ONnaCQH7');
+  const { data: g } = await sb2.from('games').select('*').eq('id', gid).single();
+  if (!g) { document.getElementById('game-title').textContent = 'ゲームが見つかりません'; return true; }
+
+  document.title = g.title + ' - D·STUDIO';
+  document.getElementById('game-title').textContent = g.title;
+  document.getElementById('game-meta').textContent = `by ${g.author_name} ｜ v${g.published_version||1} ｜ 👁 ${g.plays||0}`;
+
+  let ex = '';
+  Object.values(g.files || {}).forEach(f => {
+    if (f.mode === 'css') ex += '<style>' + f.content + '<\/style>';
+    else if (f.mode === 'javascript') ex += '<script>' + f.content + '<\/script>';
+    else ex += f.content;
+  });
+  document.getElementById('full-frame').srcdoc =
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + (g.css||'') + '<\/style><\/head><body>' +
+    (g.html||'') + ex + '<script>' + (g.js||'') + '<\/script><\/body><\/html>';
+
+  // views++
+  sb2.from('games').update({ plays: (g.plays||0) + 1 }).eq('id', gid);
+
+  // Reactions
+  const EMOJIS2 = ['👍','❤️','🔥','⭐','😂','😮'];
+  const [{ data: counts }] = await Promise.all([sb2.from('reactions').select('emoji').eq('game_id', gid)]);
+  const c = {}; EMOJIS2.forEach(e => c[e] = 0); (counts||[]).forEach(r => { if(c[r.emoji]!==undefined) c[r.emoji]++; });
+  document.getElementById('react-bar').innerHTML = EMOJIS2.map(e =>
+    '<button onclick="doReact2(\'' + gid + '\',\'' + e + '\')" style="background:rgba(255,255,255,0.05);border:1px solid #1e293b;border-radius:20px;padding:3px 10px;color:#fff;cursor:pointer;font-size:12px">' +
+    e + ' ' + (c[e]||0) + '<\/button>'
+  ).join('') + '<span style="flex:1"><\/span><span style="font-size:11px;color:#666">📝 ' + (g.description||'') + '<\/span>';
+
+  window.doReact2 = async (gid, emoji) => {
+    await sb2.from('reactions').insert({ game_id: gid, emoji });
+  };
+  return true;
+}
+
+async function openPlay(gid){
+  edGID=gid;
+  const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
+  if(!g){toast('ゲームが見つかりません','e');return;}
+  curAu=g.author_id;
+  $('pl-t').textContent=g.title;$('pl-av').textContent=g.author_avatar||'🎮';$('pl-au').textContent=g.author_name;
+  $('pl-vw').textContent=g.plays||0;$('pl-vr').textContent=g.published_version||1;
+  $('pl-desc').textContent=g.description||'説明なし';$('pl-how').textContent=g.how_to_play||'説明なし';
+  $('pl-ed').style.display=ME?.id===g.author_id?'':'none';
+  $('pl-adm').style.display=ME?.role==='admin'?'':'none';
+  const fb=$('pl-fb');
+  if(ME&&ME.id!==g.author_id){
+    const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id',ME.id).eq('following_id',g.author_id).single();
+    fb.innerHTML=`<button class="bs ${fw?'bg':'ba'}" onclick="doFollow('${g.author_id}',this)">${fw?'フォロー中':'フォロー'}</button>`;
+  } else fb.innerHTML='';
+  let ex='';Object.values(g.files||{}).forEach(f=>{if(f.mode==='css')ex+=`<style>${f.content}</style>`;else if(f.mode==='javascript')ex+=`<script>${f.content}<\/script>`;else ex+=f.content;});
+  $('pframe').srcdoc=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${g.css||''}</style></head><body>${g.html||''}${ex}<script>${g.js||''}<\/script></body></html>`;
+  await loadReactPlay(gid);
+  sb.from('games').update({plays:(g.plays||0)+1}).eq('id',gid);
+}
+async function loadReactPlay(gid){
+  const [{ data: counts },{ data: mine }] = await Promise.all([
+    sb.from('reactions').select('emoji').eq('game_id',gid),
+    ME?sb.from('reactions').select('emoji').eq('game_id',gid).eq('user_id',ME.id).single():Promise.resolve({data:null})
+  ]);
+  const c={};EMOJIS.forEach(e=>c[e]=0);(counts||[]).forEach(r=>{if(c[r.emoji]!==undefined)c[r.emoji]++;});
+  $('pl-react').innerHTML=EMOJIS.map(e=>`<button class="rbtn${mine?.emoji===e?' on':''}" onclick="playR('${gid}','${e}')">${e} <span>${c[e]||0}</span></button>`).join('');
+}
+async function playR(gid,emoji){if(!ME){toast('ログインが必要です','e');return;}await doReact(gid,emoji);await loadReactPlay(gid);}
+
+// ════════════════════════════════════════════
+//  FOLLOW / BLOCK
+// ════════════════════════════════════════════
+async function doFollow(uid2, btn){
+  if(!ME){toast('ログインが必要です','e');return;}
+  const { data: ex } = await sb.from('follows').select('follower_id').eq('follower_id',ME.id).eq('following_id',uid2).single();
+  if(ex){ await sb.from('follows').delete().eq('follower_id',ME.id).eq('following_id',uid2); toast('フォロー解除','i'); if(btn){btn.textContent='フォロー';btn.className='bs ba';} }
+  else{ await sb.from('follows').insert({follower_id:ME.id,following_id:uid2}); toast('フォローしました','s'); if(btn){btn.textContent='フォロー中';btn.className='bs bg';} }
+}
+async function doBlock(uid2){
+  if(!confirm('ブロックしますか？'))return;
+  const { data: ex } = await sb.from('blocks').select('blocker_id').eq('blocker_id',ME.id).eq('blocked_id',uid2).single();
+  if(ex){ await sb.from('blocks').delete().eq('blocker_id',ME.id).eq('blocked_id',uid2); toast('ブロックを解除しました','i'); }
+  else{ await sb.from('blocks').insert({blocker_id:ME.id,blocked_id:uid2}); await sb.from('follows').delete().eq('follower_id',ME.id).eq('following_id',uid2); toast('ブロックしました','i'); }
+}
+
+// ════════════════════════════════════════════
+//  PROFILE
+// ════════════════════════════════════════════
+async function showProfile(uid2){
+  go('profile');$('prf-h').innerHTML='<div class="spin"></div>';$('prf-items').innerHTML='';
+  const [{ data: u },{ count: fc },{ count: fwc },{ data: fw },{ data: bl }] = await Promise.all([
+    sb.from('profiles').select('*').eq('id',uid2).single(),
+    sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid2),
+    sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid2),
+    ME?sb.from('follows').select('follower_id').eq('follower_id',ME.id).eq('following_id',uid2).single():Promise.resolve({data:null}),
+    ME?sb.from('blocks').select('blocker_id').eq('blocker_id',ME.id).eq('blocked_id',uid2).single():Promise.resolve({data:null}),
+  ]);
+  if(!u){toast('ユーザーが見つかりません','e');return;}
+  const isSelf=ME?.id===uid2;
+  const ghLink=u.github_username?`<a class="prflink" href="https://github.com/${u.github_username}" target="_blank">🐱 GitHub</a>`:'';
+  const followBtn=isSelf?'':`<button class="bs ${fw?'bg':'ba'}" onclick="doFollow('${uid2}',this)">${fw?'フォロー中':'フォロー'}</button>`;
+  const blockBtn=isSelf?'':`<button class="bs bg" onclick="doBlock('${uid2}')" style="font-size:.7rem">${bl?'ブロック解除':'ブロック'}</button>`;
+  const dmBtn=isSelf?'':`<button class="bs bg" onclick="openDMWith('${uid2}')">💬 DM</button>`;
+  const rqBtn=!isSelf&&u.request_mode?`<button class="bs ba" onclick="openRqModal('${uid2}','${esc(u.display_name)}')">📩 リクエスト</button>`:'';
+  const adminBtn=ME?.role==='admin'&&!isSelf?`<button class="bs bg" onclick="openWarnModal('${uid2}')" style="font-size:.7rem">⚠ 警告</button>`:'';
+  $('prf-h').innerHTML=`<div class="prfhd">
+    <div class="prfav">${u.avatar&&u.avatar.startsWith('http')?`<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:13px">`:u.avatar||'🎮'}</div>
+    <div style="flex:1">
+      <div class="prfname">${esc(u.display_name)}${u.role==='admin'?' <span style="font-size:.7rem;color:var(--accent)">⚡</span>':''}</div>
+      <div class="prfun">@${esc(u.username)}</div>
+      <div class="prflinks">${ghLink}</div>
+      <div class="prfbio">${esc(u.bio||'')}</div>
+      ${u.request_mode?`<div class="rqbdg">📩 リクエスト受付中: ${esc(u.request_desc||'')}</div>`:''}
+      <div class="prfstats">
+        <div><div class="psn">${fc||0}</div><div class="psl">フォロワー</div></div>
+        <div><div class="psn">${fwc||0}</div><div class="psl">フォロー中</div></div>
+        <div><div class="psn">${u.game_count||0}</div><div class="psl">ゲーム数</div></div>
+      </div>
+    </div>
+    <div class="prfact">${followBtn}${dmBtn}${rqBtn}${blockBtn}${adminBtn}</div>
+  </div>`;
+  const [{ data: games },{ data: vids }] = await Promise.all([
+    sb.from('games').select('*').eq('author_id',uid2).eq('is_published',true).eq('flagged',false),
+    sb.from('videos').select('*').eq('author_id',uid2).eq('flagged',false)
+  ]);
+  window._pg=games||[];window._pv=vids||[];
+  $('prf-tabs').innerHTML=`<div style="display:flex;gap:.4rem"><button class="bs ba" onclick="rpItems('g')">🎮 ゲーム (${games?.length||0})</button><button class="bs bg" onclick="rpItems('v')">🎬 動画 (${vids?.length||0})</button></div>`;
+  rpItems('g');
+}
+function rpItems(t){const grid=$('prf-items');grid.innerHTML='';const items=t==='g'?window._pg:window._pv;if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="ei">${t==='g'?'🎮':'🎬'}</div><div class="et">${t==='g'?'公開ゲーム':'動画'}がありません</div></div>`;return;}if(t==='g')items.forEach(g=>grid.appendChild(mkCard(g)));else items.forEach(v=>grid.appendChild(mkVCard(v)));}
+function showMyProfile(){if(ME)showProfile(ME.id);}
+
+// ════════════════════════════════════════════
+//  DM
+// ════════════════════════════════════════════
+async function loadDMList(){
+  const list=$('dmlist');list.innerHTML='<div style="padding:.8rem;color:var(--tx3);font-size:.8rem"><div class="spin"></div></div>';
+  const { data: fw } = await sb.from('follows').select('following_id').eq('follower_id',ME.id);
+  const fwIds=(fw||[]).map(x=>x.following_id);
+  if(!fwIds.length){list.innerHTML='<div style="padding:1rem;color:var(--tx3);font-size:.8rem">相互フォロー中の相手がいません</div>';return;}
+  const { data: mutual } = await sb.from('follows').select('follower_id').in('follower_id',fwIds).eq('following_id',ME.id);
+  const mutualIds=(mutual||[]).map(x=>x.follower_id);
+  if(!mutualIds.length){list.innerHTML='<div style="padding:1rem;color:var(--tx3);font-size:.8rem">相互フォロー中の相手がいません</div>';return;}
+  const { data: partners } = await sb.from('profiles').select('id,username,display_name,avatar').in('id',mutualIds);
+  list.innerHTML='';
+  for(const p of partners||[]){
+    const { data: last } = await sb.from('dms').select('text,created_at').or(`from_id.eq.${ME.id},to_id.eq.${ME.id}`).or(`from_id.eq.${p.id},to_id.eq.${p.id}`).order('created_at',{ascending:false}).limit(1).single();
+    const { count: ub } = await sb.from('dms').select('*',{count:'exact',head:true}).eq('to_id',ME.id).eq('from_id',p.id).eq('read',false);
+    const el=document.createElement('div');el.className='dmi'+(curDMP===p.id?' on':'');
+    el.innerHTML=`<div class="dmav">${p.avatar||'🎮'}${ub>0?`<span class="dmub">${ub}</span>`:''}</div>
+      <div class="dminfo"><div class="dmname">${esc(p.display_name)}</div><div class="dmlast">${esc(last?.text||'メッセージなし')}</div></div>`;
+    el.onclick=()=>openDMChat(p.id,p.display_name,p.avatar||'🎮');
+    list.appendChild(el);
+  }
+}
+async function openDMWith(uid2){go('dm');setTimeout(async()=>{const { data: p } = await sb.from('profiles').select('id,display_name,avatar').eq('id',uid2).single();if(p)openDMChat(p.id,p.display_name,p.avatar||'🎮');},200);}
+async function openDMChat(uid2,name,av){
+  curDMP=uid2;curDMPAv=av;
+  document.querySelectorAll('.dmi').forEach(el=>el.classList.toggle('on',el.querySelector('.dmname')?.textContent===name));
+  $('dmchd').innerHTML=`<span class="dmav">${av}</span><span style="font-weight:700;font-size:.88rem">${esc(name)}</span><button class="bs bg" onclick="doBlock('${uid2}')" style="font-size:.7rem;margin-left:auto">🚫 ブロック</button>`;
+  $('dm-inp-area').style.display='';
+  await loadMsgs(uid2);
+  if(dmSub) sb.removeChannel(dmSub);
+  dmSub=sb.channel(`dm-${[ME.id,uid2].sort().join('-')}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'dms',filter:`to_id=eq.${ME.id}`},async(payload)=>{
+    if(payload.new.from_id===curDMP) appendMsg(payload.new,false);
+  }).subscribe();
+}
+async function loadMsgs(uid2){
+  const msgs=$('dmmsgs');msgs.innerHTML='<div class="spin"></div>';
+  const { data } = await sb.from('dms').select('*').or(`and(from_id.eq.${ME.id},to_id.eq.${uid2}),and(from_id.eq.${uid2},to_id.eq.${ME.id})`).order('created_at',{ascending:true});
+  msgs.innerHTML='';
+  if(!data?.length){msgs.innerHTML='<div class="dmemp">まだメッセージがありません 👋</div>';return;}
+  data.forEach(m=>appendMsg(m,m.from_id===ME.id));
+  msgs.scrollTop=msgs.scrollHeight;
+  sb.from('dms').update({read:true}).eq('to_id',ME.id).eq('from_id',uid2).eq('read',false);
+  loadBadges();
+}
+function appendMsg(m,isMe){
+  const msgs=$('dmmsgs');const empty=msgs.querySelector('.dmemp');if(empty)empty.remove();
+  const row=document.createElement('div');row.className='msgr'+(isMe?' me':'');
+  row.innerHTML=`<div class="msgav">${isMe?(ME.avatar||'🎮'):(curDMPAv||'👤')}</div><div><div class="msgb">${esc(m.text)}</div><div class="msgt">${ft(m.created_at)}</div></div>`;
+  msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
+}
+async function sendMsg(){
+  const inp=$('dm-inp');const text=inp.value.trim();if(!text||!curDMP)return;
+  inp.value='';
+  const msg={from_id:ME.id,to_id:curDMP,text};
+  appendMsg({...msg,created_at:new Date().toISOString()},true);
+  const { error } = await sb.from('dms').insert(msg);
+  if(error) toast('送信エラー','e');
+}
+
+// ════════════════════════════════════════════
+//  REQUESTS
+// ════════════════════════════════════════════
+function openRqModal(uid2,name){rqTarget=uid2;$('rq-tn').textContent=`${name} さんへのリクエスト`;$('rq-msg').value='';$('rq-e').textContent='';openM('m-request');}
+async function submitRq(){const msg=$('rq-msg').value.trim();const e=$('rq-e');e.textContent='';if(!msg){e.textContent='メッセージを入力してください';return;}const { error } = await sb.from('requests').insert({from_id:ME.id,to_id:rqTarget,message:msg});if(error){e.textContent=error.message;return;}toast('リクエストを送信しました！','s');closeM('m-request');}
+async function loadRQ(){
+  const body=$('rq-b');body.innerHTML='<div class="spin"></div>';
+  const [{ data: recv },{ data: sent }] = await Promise.all([
+    sb.from('requests').select('*,from:from_id(username,display_name,avatar)').eq('to_id',ME.id).order('created_at',{ascending:false}),
+    sb.from('requests').select('*,to:to_id(username,display_name)').eq('from_id',ME.id).order('created_at',{ascending:false})
+  ]);
+  body.innerHTML='';
+  body.innerHTML+=`<h3 style="font-size:.82rem;color:var(--tx2);margin-bottom:.6rem">📥 受信したリクエスト</h3>`;
+  if(!recv?.length) body.innerHTML+='<p style="color:var(--tx3);font-size:.82rem;margin-bottom:1rem">リクエストはありません</p>';
+  recv?.forEach(rq=>{
+    const stCls=rq.status==='pending'?'rqp':rq.status==='accepted'?'rqa':'rqr';
+    const el=document.createElement('div');el.className='rqcard';
+    el.innerHTML=`<div class="rqfrom"><span style="font-size:1.1rem">${rq.from?.avatar||'🎮'}</span><span style="font-weight:700">${esc(rq.from?.display_name||'')}</span><span style="color:var(--tx3);font-size:.72rem;margin-left:auto">${fd(rq.created_at)}</span></div>
+      <div class="rqmsg">${esc(rq.message)}</div>
+      ${rq.status==='pending'?`<div><button class="bs bgn" onclick="updRq('${rq.id}','accepted')">✅ 受け入れる</button> <button class="bs bd2" onclick="updRq('${rq.id}','rejected')">❌ 断る</button></div>`:`<span class="rqst ${stCls}">${rq.status==='accepted'?'✅ 受け入れ済':'❌ お断り'}</span>`}`;
+    body.appendChild(el);
+  });
+  body.innerHTML+=`<h3 style="font-size:.82rem;color:var(--tx2);margin:.9rem 0 .6rem">📤 送ったリクエスト</h3>`;
+  if(!sent?.length) body.innerHTML+='<p style="color:var(--tx3);font-size:.82rem">送ったリクエストはありません</p>';
+  sent?.forEach(rq=>{
+    const stCls=rq.status==='pending'?'rqp':rq.status==='accepted'?'rqa':'rqr';
+    const el=document.createElement('div');el.className='rqcard';
+    el.innerHTML=`<div class="rqfrom"><span style="font-weight:700;color:var(--tx2)">→ ${esc(rq.to?.display_name||'')}</span><span class="rqst ${stCls}" style="margin-left:auto">${rq.status==='pending'?'⏳ 返答待ち':rq.status==='accepted'?'✅ 承認':'❌ お断り'}</span></div><div class="rqmsg">${esc(rq.message)}</div>`;
+    body.appendChild(el);
+  });
+}
+async function updRq(id,status){await sb.from('requests').update({status}).eq('id',id);toast(status==='accepted'?'受け入れました':'お断りしました','s');loadRQ();}
+
+// ════════════════════════════════════════════
+//  NOTICES
+// ════════════════════════════════════════════
+async function loadNotices(){
+  const body=$('nt-b');body.innerHTML='<div class="spin"></div>';
+  const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(30);
+  body.innerHTML='';
+  if(!data?.length){body.innerHTML='<div class="empty"><div class="ei">📢</div><div class="et">お知らせはありません</div></div>';return;}
+  data.forEach(n=>{const el=document.createElement('div');el.className=`ncard${n.type==='warn'?' w':n.type==='danger'?' d':''}`;el.innerHTML=`<div class="ntitle">${n.type==='danger'?'🚨':n.type==='warn'?'⚠️':'📢'} ${esc(n.title)}</div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;body.appendChild(el);});
+}
+
+// ════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════
+function loadSettings(){
+  const u=ME;
+  $('set-b').innerHTML=`
+    <div class="ssec"><div class="stitle">👤 プロフィール編集</div>
+      <div class="fg"><label class="mlbl">表示名</label><input class="inp" type="text" id="sn" value="${esc(u.display_name)}"></div>
+      <div class="fg"><label class="mlbl">自己紹介</label><textarea class="inp" id="sb-bio" rows="2">${esc(u.bio||'')}</textarea></div>
+      <div class="fg"><label class="mlbl">アバター</label>
+        <div class="avs" id="set-av">${['🎮','🚀','⭐','🐱','🦊','🐲','👾','🤖','🔥','💎'].map(a=>`<div class="avo${u.avatar===a?' on':''}" data-v="${a}" onclick="selAv(this)">${a}</div>`).join('')}</div>
+        <div style="margin-top:.6rem;display:flex;align-items:center;gap:.6rem">
+          <label style="font-size:.75rem;color:var(--tx2)">または画像をアップロード:</label>
+          <input type="file" id="av-file" accept="image/*" style="font-size:.75rem;color:var(--tx2)" onchange="previewAvatar(this)">
+        </div>
+        <div id="av-preview" style="margin-top:.5rem;display:none">
+          <img id="av-img" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
+          <span style="font-size:.72rem;color:var(--green);margin-left:.5rem">✅ 画像選択済み</span>
+        </div>
+      </div>
+      <button class="bs ba" onclick="saveProf()">保存</button>
+    </div>
+    <div class="ssec"><div class="stitle">📩 リクエスト設定</div>
+      <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.7rem">
+        <button class="bs ${u.request_mode?'ba':'bg'}" id="rq-mb" onclick="toggleRqMode()">${u.request_mode?'📩 受付中':'受け付けない'}</button>
+        <span style="font-size:.78rem;color:var(--tx2)">${u.request_mode?'受け付けています':'受け付けていません'}</span>
+      </div>
+      <div class="fg"><label class="mlbl">募集文</label><textarea class="inp" id="rq-desc" rows="2">${esc(u.request_desc||'')}</textarea></div>
+      <button class="bs ba" onclick="saveRqMode()">設定を保存</button>
+    </div>
+    <div class="ssec"><div class="stitle">🐱 GitHub連携</div>
+      <div class="crow"><div class="ci">🐱</div><div class="cinfo"><div class="cname">GitHub</div><div class="cst ${u.github_username?'lk':''}">${u.github_username?`✅ @${u.github_username}`:'未連携'}</div></div>
+      <input class="inp" type="text" id="gh-u" value="${esc(u.github_username||'')}" placeholder="GitHubユーザー名" style="width:140px">
+      <button class="bs bg" onclick="saveGH()" style="margin-left:.4rem">保存</button></div>
+    </div>`;
+}
+function selAv(el){document.querySelectorAll('#set-av .avo').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
+function previewAvatar(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{$('av-img').src=e.target.result;$('av-preview').style.display='';};
+  reader.readAsDataURL(file);
+  document.querySelectorAll('#set-av .avo').forEach(o=>o.classList.remove('on'));
+}
+async function saveProf(){
+  const name=$('sn').value.trim(),bio=$('sb-bio').value;
+  let av=document.querySelector('#set-av .avo.on')?.dataset.v||ME.avatar;
+  const b=event.target;b.disabled=true;b.textContent='保存中...';
+  const file=$('av-file')?.files[0];
+  if(file){
+    const ext=file.name.split('.').pop();
+    const path=`avatars/${ME.id}.${ext}`;
+    const {error:se}=await sb.storage.from('avatars').upload(path,file,{upsert:true,contentType:file.type});
+    if(!se){
+      const {data:url}=sb.storage.from('avatars').getPublicUrl(path);
+      av=url.publicUrl+'?t='+Date.now();
+    }
+  }
+  const {error}=await sb.from('profiles').update({display_name:name,bio,avatar:av}).eq('id',ME.id);
+  if(error){toast(error.message,'e');b.disabled=false;b.textContent='保存';return;}
+  ME.display_name=name;ME.bio=bio;ME.avatar=av;applyUser();toast('保存しました','s');
+  b.disabled=false;b.textContent='保存';
+}
+async function toggleRqMode(){ME.request_mode=!ME.request_mode;await sb.from('profiles').update({request_mode:ME.request_mode}).eq('id',ME.id);loadSettings();}
+async function saveRqMode(){const desc=$('rq-desc').value;await sb.from('profiles').update({request_mode:ME.request_mode,request_desc:desc}).eq('id',ME.id);ME.request_desc=desc;toast('設定を保存しました','s');}
+async function saveGH(){const gh=$('gh-u').value.trim();await sb.from('profiles').update({github_username:gh}).eq('id',ME.id);ME.github_username=gh;toast('GitHubを保存しました','s');loadSettings();}
+
+// ════════════════════════════════════════════
+//  ADMIN
+// ════════════════════════════════════════════
+function swAdm(t){admTab=t;document.querySelectorAll('.atab2').forEach((x,i)=>x.classList.toggle('on',['users','games','videos','search','notice','maintenance'][i]===t));loadAdmin();}
+async function loadAdmin(){
+  const c=$('adm-c');c.innerHTML='<div class="spin"></div>';
+  if(admTab==='users'){
+    const { data: users } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+    const userRows = (users||[]).map(u=>{
+      const banned = u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':u.banned==='yellow'?'<span class="bdg bg-y">警告中</span>':'<span class="bdg bg-g">正常</span>';
+      let btns = '-';
+      if(u.id!==ME.id){
+        btns = '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+u.id+"'">⚠ 警告</button>';
+        if(u.banned&&u.banned!=='none') btns += '<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('"+u.id+"'">解除</button>';
+        if(u.role!=='admin') btns += '<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('"+u.id+"'">⚡ 管理者</button>';
+        else btns += '<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('"+u.id+"'">管理者解除</button>';
+      }
+      return '<tr>'
+        +'<td>'+(u.avatar||'🎮')+'</td>'
+        +'<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+u.id+"'">'+esc(u.username)+'</span></td>'
+        +'<td>'+esc(u.display_name)+'</td>'
+        +'<td>'+(u.role==='admin'?'⚡ Admin':'User')+'</td>'
+        +'<td>'+banned+'</td>'
+        +'<td>'+fd(u.created_at)+'</td>'
+        +'<td><div style="display:flex;gap:.3rem;flex-wrap:wrap">'+btns+'</div></td>'
+        +'</tr>';
+    }).join('');
+    c.innerHTML='<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>ロール</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead><tbody>'+userRows+'</tbody></table>';
+  } else if(admTab==='games'){
+    const { data: games } = await sb.from('games').select('*').order('updated_at',{ascending:false});
+    renderAdmGames(games||[],c);
+  } else if(admTab==='videos'){
+    const { data: vids } = await sb.from('videos').select('*').order('created_at',{ascending:false});
+    c.innerHTML=`<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>👁</th><th>操作</th></tr></thead><tbody>
+      ${(vids||[]).map(v=>`<tr><td>${esc(v.title)}</td><td>${esc(v.author_name)}</td>
+      <td>${v.flagged?'<span class="bdg bg-r">非表示</span>':'<span class="bdg bg-g">公開中</span>'}</td><td>${v.views||0}</td>
+      <td><div style="display:flex">${!v.flagged?`<button class="bs bd2" style="font-size:.7rem" onclick="admFlagV('${v.id}')">⚠ 非表示</button>`:'-'}</div></td></tr>`).join('')}
+    </tbody></table>`;
+  } else if(admTab==='search'){
+    c.innerHTML=`<div style="display:flex;gap:.5rem;margin-bottom:.9rem"><input class="inp" type="text" id="adm-sq" placeholder="ユーザー名・表示名でピンポイント検索..."><button class="bs ba" onclick="admSearch()">検索</button></div><div id="adm-sr"></div>`;
+  } else if(admTab==='notice'){
+    c.innerHTML=`<div class="ssec" style="margin-bottom:.8rem"><div class="stitle">📢 お知らせを投稿</div>
+      <div class="fg"><label class="mlbl">タイトル</label><input class="inp" type="text" id="nt-t" placeholder="タイトル..."></div>
+      <div class="fg"><label class="mlbl">本文</label><textarea class="inp" id="nt-b" rows="4" placeholder="内容..."></textarea></div>
+      <div class="fg"><label class="mlbl">種類</label><select class="inp" id="nt-tp"><option value="info">📢 通常</option><option value="warn">⚠️ 警告</option><option value="danger">🚨 重要</option></select></div>
+      <button class="bs ba" onclick="postNotice()">投稿する</button></div>
+      <div id="nt-list"><div class="spin"></div></div>`;
+    loadAdmNotices();
+  } else if(admTab==='maintenance'){
+    loadMaintenance();
+  }
+}
+function renderAdmGames(games,container){
+  const rows = games.map(g=>{
+    const statusBadge = g.flagged
+      ? '<span class="bdg bg-r">⚠ '+esc(g.flag_reason||'通報済')+'</span>'
+      : g.is_published ? '<span class="bdg bg-g">公開中</span>' : '<span class="bdg bg-x">下書き</span>';
+    const actionBtn = g.flagged
+      ? '<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag('"+g.id+"'">✅ 非表示解除</button>'
+      : '<button class="bs bd2" style="font-size:.7rem" onclick="admFlag('"+g.id+"'">🚫 非表示</button>';
+    return '<tr>'
+      + '<td>'+esc(g.title)+'</td>'
+      + '<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+g.author_id+"'">'+esc(g.author_name)+'</span></td>'
+      + '<td>'+statusBadge+'</td>'
+      + '<td>'+(g.plays||0)+'</td>'
+      + '<td><div style="display:flex;gap:.28rem;flex-wrap:wrap">'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="admSrc('"+g.id+"'">💻 コード</button>'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+g.author_id+"'">⚠ 作者に警告</button>'
+      + actionBtn
+      + '</div></td></tr>';
+  }).join('');
+  container.innerHTML = '<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>👁</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+async function admSearch(){const q=$('adm-sq').value.trim();const { data } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%`);const el=$('adm-sr');if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.82rem">見つかりませんでした</p>';return;}el.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>状態</th><th>操作</th></tr></thead><tbody>${data.map(u=>`<tr><td>${u.avatar||'🎮'}</td><td>${esc(u.username)}</td><td>${esc(u.display_name)}</td><td>${u.banned!=='none'&&u.banned?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td><td><div style="display:flex;gap:.3rem"><button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button></div></td></tr>`).join('')}</tbody></table>`;}
+async function admSrc(gid){const { data: g } = await sb.from('games').select('html,css,js,title').eq('id',gid).single();if(!g)return;$('src-c').innerHTML=`<div style="margin-bottom:.35rem"><span class="bdg bg-g">HTML</span></div><div class="srcv"><pre>${esc(g.html)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-y">CSS</span></div><div class="srcv"><pre>${esc(g.css)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-x">JS</span></div><div class="srcv"><pre>${esc(g.js)}</pre></div>`;openM('m-source');}
+async function admFlag(gid){const r=prompt('通報理由:');if(r===null)return;await sb.from('games').update({flagged:true,flag_reason:r,is_published:false}).eq('id',gid);toast('通報しました','s');loadAdmin();}
+async function admUnflag(gid){await sb.from('games').update({flagged:false,flag_reason:''}).eq('id',gid);toast('解除しました','s');loadAdmin();}
+async function admFlagV(vid){if(!confirm('非表示にしますか？'))return;await sb.from('videos').update({flagged:true}).eq('id',vid);toast('非表示にしました','s');loadAdmin();}
+async function adminGameAct(gid){
+  const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
+  if(!g)return;
+  if(confirm(`「${g.title}」の管理\n\n[OK] コードを確認\n[キャンセル] 閉じる`)){
+    admSrc(gid);
+  }
+}
+
+function openWarnModal(uid2){
+  $('warn-c').innerHTML=`<p style="font-size:.84rem;color:var(--tx2);margin-bottom:.9rem">警告カードを選択してください</p>
+    <div class="fg"><label class="mlbl">理由</label><input class="inp" type="text" id="w-reason" placeholder="警告の理由..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
+      <button class="bs bg" style="border-color:var(--a3);color:var(--a3);padding:.6rem;flex-direction:column;height:auto" onclick="issueWarn('${uid2}','yellow')">🟡 イエロー<span style="font-size:.66rem;opacity:.8;margin-top:.2rem">注意（2枚でレッド）</span></button>
+      <button class="bs bg" style="border-color:var(--red);color:var(--red);padding:.6rem;flex-direction:column;height:auto" onclick="issueWarn('${uid2}','red')">🔴 レッド<span style="font-size:.66rem;opacity:.8;margin-top:.2rem">3日間停止</span></button>
+      <button class="bs bg" style="border-color:#00b4ff;color:#00b4ff;padding:.6rem;flex-direction:column;height:auto" onclick="issueWarn('${uid2}','blue')">🔵 ブルー<span style="font-size:.66rem;opacity:.8;margin-top:.2rem">永久停止</span></button>
+      <button class="bs bg" style="border-color:var(--green);color:var(--green);padding:.6rem;flex-direction:column;height:auto" onclick="issueWarn('${uid2}','green')">🟢 グリーン<span style="font-size:.66rem;opacity:.8;margin-top:.2rem">アカウント削除</span></button>
+    </div>
+    <div class="ma"><button class="bs bg" onclick="closeM('m-warn')">キャンセル</button></div>`;
+  openM('m-warn');
+}
+async function issueWarn(uid2,card){
+  const reason=$('w-reason').value.trim();
+  const msgs={yellow:'🟡 イエローカードを発行します',red:'🔴 3日間停止します',blue:'🔵 永久停止します',green:'🟢 アカウントと全作品を削除します（取り消し不可）'};
+  if(!confirm(`${msgs[card]}\n理由: ${reason||'理由なし'}`))return;
+  closeM('m-warn');
+  try {
+    if(card==='yellow'){
+      let count = 0;
+      try { const r = await sb.from('warnings').select('*',{count:'exact',head:true}).eq('target_id',uid2).eq('card','yellow'); count = r.count||0; } catch(e){}
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      if(count>=1){ await sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2); toast('イエロー2枚目→レッド昇格（3日停止）','s'); }
+      else { await sb.from('profiles').update({banned:'yellow'}).eq('id',uid2); toast('イエローカードを発行しました','s'); }
+    } else if(card==='red'){
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      await sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2);
+      toast('レッドカード：3日間停止','s');
+    } else if(card==='blue'){
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      await sb.from('profiles').update({banned:'blue'}).eq('id',uid2);
+      toast('ブルーカード：永久停止','s');
+    } else if(card==='green'){
+      await Promise.all([sb.from('games').delete().eq('author_id',uid2),sb.from('videos').delete().eq('author_id',uid2),sb.from('profiles').delete().eq('id',uid2)]);
+      toast('アカウントと全作品を削除しました','s');
+    }
+  } catch(e) { toast('エラー: '+e.message,'e'); }
+  loadAdmin();
+}
+async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
+async function grantAdmin(uid2){if(!confirm('このユーザーに管理者権限を付与しますか？'))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
+async function revokeAdmin(uid2){if(!confirm('管理者権限を解除しますか？'))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
+
+// ════════════════════════════════════════════
+//  MAINTENANCE
+// ════════════════════════════════════════════
+async function loadMaintenance(){
+  const c=$('adm-c');
+  // Get current maintenance state
+  const { data: mData } = await sb.from('settings').select('*').eq('key','maintenance').single().catch(()=>({data:null}));
+  const isOn = mData?.value === 'true';
+
+  c.innerHTML=`
+    <div class="ssec" style="margin-bottom:.8rem">
+      <div class="stitle">🔧 メンテナンスモード</div>
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <div style="width:14px;height:14px;border-radius:50%;background:${isOn?'var(--red)':'var(--green)'}"></div>
+        <span style="font-size:.9rem;font-weight:700">${isOn?'🔴 メンテナンス中':'🟢 通常稼働中'}</span>
+      </div>
+      <p style="font-size:.8rem;color:var(--tx2);margin-bottom:1rem;line-height:1.6">
+        メンテナンスモードをオンにすると、管理者以外のユーザーはサイトにアクセスできなくなります。
+      </p>
+      <div class="fg"><label class="mlbl">メンテナンス中のメッセージ</label>
+        <textarea class="inp" id="maint-msg" rows="3" placeholder="例: ただいまメンテナンス中です。しばらくお待ちください。">${mData?.message||''}</textarea>
+      </div>
+      <div style="display:flex;gap:.6rem;margin-top:.8rem">
+        ${isOn
+          ?`<button class="bs bgn" onclick="setMaintenance(false)" style="font-size:.82rem;padding:.7rem 1.4rem">✅ メンテナンス終了</button>`
+          :`<button class="bs bd2" onclick="setMaintenance(true)" style="font-size:.82rem;padding:.7rem 1.4rem">🔧 メンテナンス開始</button>`}
+      </div>
+    </div>
+
+    <div class="ssec">
+      <div class="stitle">⏸ ゲーム個別停止</div>
+      <p style="font-size:.78rem;color:var(--tx2);margin-bottom:.8rem">停止したいゲームを選んで期間を指定してください</p>
+      <div id="game-suspend-list"><div class="spin"></div></div>
+    </div>`;
+
+  loadGameSuspendList();
+}
+
+async function setMaintenance(on){
+  const msg = $('maint-msg')?.value || '';
+  const { error } = await sb.from('settings').upsert({key:'maintenance', value:String(on), message:msg},{onConflict:'key'});
+  if(error){
+    // settingsテーブルがなければ作成を促す
+    toast('settingsテーブルが必要です。SQLを実行してください','e');
+    return;
+  }
+  toast(on?'🔧 メンテナンスモードを開始しました':'✅ メンテナンスを終了しました', on?'e':'s');
+  loadMaintenance();
+}
+
+async function loadGameSuspendList(){
+  const el=$('game-suspend-list');if(!el)return;
+  const { data: games } = await sb.from('games').select('id,title,author_name,is_published,suspended_until').order('updated_at',{ascending:false});
+  if(!games?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--tx3)">ゲームがありません</p>';return;}
+  el.innerHTML=`<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>停止期限</th><th>操作</th></tr></thead><tbody>
+    ${games.map(g=>{
+      const suspended = g.suspended_until && new Date(g.suspended_until) > new Date();
+      const until = g.suspended_until ? new Date(g.suspended_until).toLocaleDateString('ja-JP') : '-';
+      return `<tr>
+        <td>${esc(g.title)}</td>
+        <td>${esc(g.author_name)}</td>
+        <td>${suspended?'<span class="bdg bg-r">停止中</span>':g.is_published?'<span class="bdg bg-g">公開中</span>':'<span class="bdg bg-x">下書き</span>'}</td>
+        <td style="font-size:.75rem">${suspended?until:'-'}</td>
+        <td><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
+          ${suspended
+            ?`<button class="bs bgn" style="font-size:.7rem" onclick="unsuspendGame('${g.id}')">▶ 停止解除</button>`
+            :`<select id="suspend-days-${g.id}" style="padding:3px 6px;background:var(--bg4);border:1px solid var(--bd2);border-radius:4px;color:var(--tx);font-size:.72rem">
+                <option value="1">1日</option>
+                <option value="3">3日</option>
+                <option value="7">7日</option>
+                <option value="30">30日</option>
+                <option value="999">無期限</option>
+              </select>
+              <button class="bs bd2" style="font-size:.7rem" onclick="suspendGame('${g.id}')">⏸ 停止</button>`
+          }
+        </div></td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+async function suspendGame(gid){
+  const sel = $(`suspend-days-${gid}`);
+  const days = parseInt(sel?.value||'1');
+  const until = days===999 ? new Date('2099-01-01').toISOString() : new Date(Date.now()+days*24*3600*1000).toISOString();
+  const { error } = await sb.from('games').update({suspended_until:until, is_published:false}).eq('id',gid);
+  if(error){toast('エラー: '+error.message,'e');return;}
+  toast(`⏸ ${days===999?'無期限':days+'日間'}停止しました`,'s');
+  loadGameSuspendList();
+}
+
+async function unsuspendGame(gid){
+  await sb.from('games').update({suspended_until:null, is_published:true}).eq('id',gid);
+  toast('▶ 停止を解除しました','s');
+  loadGameSuspendList();
+}
+
+async function loadAdmNotices(){const el=$('nt-list');if(!el)return;el.innerHTML='<div class="spin"></div>';const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);el.innerHTML='';if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.8rem">お知らせはありません</p>';return;}data.forEach(n=>{const d=document.createElement('div');d.className='ncard';d.innerHTML=`<div class="ntitle">${esc(n.title)}<button class="bs bd2" onclick="delNotice('${n.id}')" style="font-size:.68rem;padding:.15rem .42rem;margin-left:auto">削除</button></div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;el.appendChild(d);});}
+async function postNotice(){const t=$('nt-t').value.trim(),b=$('nt-b').value.trim(),tp=$('nt-tp').value;if(!t||!b){toast('タイトルと本文を入力してください','e');return;}await sb.from('notices').insert({title:t,body:b,type:tp,author_id:ME.id});toast('お知らせを投稿しました！','s');$('nt-t').value='';$('nt-b').value='';loadAdmNotices();}
+async function delNotice(id){if(!confirm('削除しますか？'))return;await sb.from('notices').delete().eq('id',id);toast('削除しました','s');loadAdmNotices();}
+</script>
+</body>
+</html>
