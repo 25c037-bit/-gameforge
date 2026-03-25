@@ -1526,14 +1526,14 @@ async function loadAdmin(){
       const banned = u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':u.banned==='yellow'?'<span class="bdg bg-y">警告中</span>':'<span class="bdg bg-g">正常</span>';
       let btns = '-';
       if(u.id!==ME.id){
-        btns = '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+u.id+"'">⚠ 警告</button>';
-        if(u.banned&&u.banned!=='none') btns += '<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('"+u.id+"'">解除</button>';
-        if(u.role!=='admin') btns += '<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('"+u.id+"'">⚡ 管理者</button>';
-        else btns += '<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('"+u.id+"'">管理者解除</button>';
+        btns = '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+u.id+"'")>⚠ 警告</button>';
+        if(u.banned&&u.banned!=='none') btns += '<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('"+u.id+"'")>解除</button>';
+        if(u.role!=='admin') btns += '<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('"+u.id+"'")>⚡ 管理者</button>';
+        else btns += '<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('"+u.id+"'")>管理者解除</button>';
       }
       return '<tr>'
         +'<td>'+(u.avatar||'🎮')+'</td>'
-        +'<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+u.id+"'">'+esc(u.username)+'</span></td>'
+        +'<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+u.id+"'")>'+esc(u.username)+'</span></td>'
         +'<td>'+esc(u.display_name)+'</td>'
         +'<td>'+(u.role==='admin'?'⚡ Admin':'User')+'</td>'
         +'<td>'+banned+'</td>'
@@ -1572,16 +1572,16 @@ function renderAdmGames(games,container){
       ? '<span class="bdg bg-r">⚠ '+esc(g.flag_reason||'通報済')+'</span>'
       : g.is_published ? '<span class="bdg bg-g">公開中</span>' : '<span class="bdg bg-x">下書き</span>';
     const actionBtn = g.flagged
-      ? '<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag('"+g.id+"'">✅ 非表示解除</button>'
-      : '<button class="bs bd2" style="font-size:.7rem" onclick="admFlag('"+g.id+"'">🚫 非表示</button>';
+      ? '<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag('"+g.id+"'")>✅ 非表示解除</button>'
+      : '<button class="bs bd2" style="font-size:.7rem" onclick="admFlag('"+g.id+"'")>🚫 非表示</button>';
     return '<tr>'
       + '<td>'+esc(g.title)+'</td>'
-      + '<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+g.author_id+"'">'+esc(g.author_name)+'</span></td>'
+      + '<td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('"+g.author_id+"'")>'+esc(g.author_name)+'</span></td>'
       + '<td>'+statusBadge+'</td>'
       + '<td>'+(g.plays||0)+'</td>'
       + '<td><div style="display:flex;gap:.28rem;flex-wrap:wrap">'
-      + '<button class="bs bg" style="font-size:.7rem" onclick="admSrc('"+g.id+"'">💻 コード</button>'
-      + '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+g.author_id+"'">⚠ 作者に警告</button>'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="admSrc('"+g.id+"'")>💻 コード</button>'
+      + '<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('"+g.author_id+"'")>⚠ 作者に警告</button>'
       + actionBtn
       + '</div></td></tr>';
   }).join('');
