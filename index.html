@@ -394,7 +394,7 @@ textarea.inp{resize:vertical;min-height:50px}
         </div>
       </div>
       <div class="edr">
-        <div class="pvtb"><span class="pvtitle">▶ PREVIEW</span><span style="flex:1"></span><button class="bs bg" onclick="go('play',edGID)" style="font-size:.68rem">別ページで開く ↗</button></div>
+        <div class="pvtb"><span class="pvtitle">▶ PREVIEW</span><span style="flex:1"></span><button class="bs bg" onclick="openGameUrl(edGID)" style="font-size:.68rem">別ページで開く ↗</button></div>
         <div class="pvwrap"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
       </div>
     </div>
@@ -612,8 +612,8 @@ function go(page, data=null) {
   if(page==='notices') loadNotices();
   if(page==='settings') loadSettings();
   if(page==='admin') loadAdmin();
-  if(page==='play' && data) openPlay(data);
   if(page==='editor' && data) openEditor(data);
+  if(page==='play' && data) { openGameUrl(data); return; }
 }
 function goBack() { const p=pageStack.pop(); go(p||'timeline'); }
 
@@ -634,6 +634,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('li-p').addEventListener('keydown', e => e.key==='Enter' && authLogin());
   $('li-u').addEventListener('keydown', e => e.key==='Enter' && $('li-p').focus());
   $('re-p').addEventListener('keydown', e => e.key==='Enter' && authRegister());
+
+  // 専用ゲームURLチェック
+  if (await checkGameUrl()) return;
 
   // ローカルに保存されたセッションを復元
   const saved = localStorage.getItem('ds_session');
@@ -817,8 +820,8 @@ function mkCard(g){
   const el=document.createElement('div'); el.className='card'; el.dataset.id=g.id;
   const rH=EMOJIS.map(e=>`<button class="rbtn" id="rc-${g.id}-${e.codePointAt(0)}" onclick="doReact('${g.id}','${e}')">${e} <span>0</span></button>`).join('');
   const avHtml=g.author_avatar&&g.author_avatar.startsWith('http')?`<img src="${g.author_avatar}" style="width:100%;height:100%;object-fit:cover">`:g.author_avatar||'🎮';
-  el.innerHTML=`<div class="cthumb" onclick="go('play','${g.id}')" style="${g.author_avatar&&g.author_avatar.startsWith('http')?'padding:0;overflow:hidden':''}">${avHtml}</div>
-    <div class="cbody" onclick="go('play','${g.id}')">
+  el.innerHTML=`<div class="cthumb" onclick="openGameUrl('${g.id}')" style="${g.author_avatar&&g.author_avatar.startsWith('http')?'padding:0;overflow:hidden':''}">${avHtml}</div>
+    <div class="cbody" onclick="openGameUrl('${g.id}')">
       <div class="ctitle">${esc(g.title)}</div>
       <div class="cdesc">${esc(g.description||'')}</div>
       <div class="cmeta">
@@ -912,7 +915,7 @@ async function loadMG(){
     const row=document.createElement('div');row.className='mrow';
     const badge=g.is_published?`<span class="bdg bg-g">● 公開中 v${g.published_version}</span>`:g.flagged?`<span class="bdg bg-r">⚠ 通報済</span>`:`<span class="bdg bg-x">○ 下書き</span>`;
     row.innerHTML=`<div class="minfo"><div class="mtitle">${esc(g.title)}</div><div class="mmeta">${badge} &nbsp;👁 ${g.plays||0} &nbsp;${fd(g.updated_at)}</div></div>
-      <button class="bs bg" onclick="go('play','${g.id}')">▶</button>
+      <button class="bs bg" onclick="openGameUrl('${g.id}')">▶</button>
       <button class="bs ba" onclick="go('editor','${g.id}')">✏️ 編集</button>`;
     body.appendChild(row);
   });
@@ -1135,6 +1138,78 @@ function restoreV(v){if(!confirm(`v${v.version} を復元しますか？`))retur
 // ════════════════════════════════════════════
 //  PLAY
 // ════════════════════════════════════════════
+// ── ゲーム専用URL ──
+function openGameUrl(gid) {
+  if (!gid) return;
+  const url = window.location.href.split('?')[0] + '?game=' + gid;
+  window.location.href = url;
+}
+
+// ── 全画面プレイモード（?game=xxx でアクセスしたとき） ──
+async function checkGameUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const gid = params.get('game');
+  if (!gid) return false;
+
+  // 全画面プレイUIを表示
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100vh;background:#000;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:#0d1117;border-bottom:2px solid #e94560;flex-shrink:0">
+        <button onclick="window.location.href=window.location.href.split('?')[0]"
+          style="padding:6px 14px;background:#333;border:1px solid #555;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;font-weight:700">
+          ← D·STUDIOに戻る
+        </button>
+        <span id="game-title" style="font-size:13px;font-weight:700;color:#e94560">読み込み中...</span>
+        <span style="flex:1"></span>
+        <span id="game-meta" style="font-size:11px;color:#666"></span>
+      </div>
+      <div style="flex:1;position:relative;overflow:hidden">
+        <iframe id="full-frame"
+          style="width:100%;height:100%;border:none;background:#fff"
+          sandbox="allow-scripts allow-same-origin allow-forms">
+        </iframe>
+      </div>
+      <div style="padding:6px 14px;background:#0d1117;border-top:1px solid #1e293b;display:flex;gap:8px;align-items:center;flex-shrink:0" id="react-bar">
+        <span style="font-size:11px;color:#666">読み込み中...</span>
+      </div>
+    </div>`;
+
+  const sb2 = supabase.createClient('https://llgvqnzgahabvsfbadwk.supabase.co', 'sb_publishable_kwSxcYoRg5nYMruBMr-ciQ_ONnaCQH7');
+  const { data: g } = await sb2.from('games').select('*').eq('id', gid).single();
+  if (!g) { document.getElementById('game-title').textContent = 'ゲームが見つかりません'; return true; }
+
+  document.title = g.title + ' - D·STUDIO';
+  document.getElementById('game-title').textContent = g.title;
+  document.getElementById('game-meta').textContent = `by ${g.author_name} ｜ v${g.published_version||1} ｜ 👁 ${g.plays||0}`;
+
+  let ex = '';
+  Object.values(g.files || {}).forEach(f => {
+    if (f.mode === 'css') ex += '<style>' + f.content + '<\/style>';
+    else if (f.mode === 'javascript') ex += '<script>' + f.content + '<\/script>';
+    else ex += f.content;
+  });
+  document.getElementById('full-frame').srcdoc =
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + (g.css||'') + '<\/style><\/head><body>' +
+    (g.html||'') + ex + '<script>' + (g.js||'') + '<\/script><\/body><\/html>';
+
+  // views++
+  sb2.from('games').update({ plays: (g.plays||0) + 1 }).eq('id', gid);
+
+  // Reactions
+  const EMOJIS2 = ['👍','❤️','🔥','⭐','😂','😮'];
+  const [{ data: counts }] = await Promise.all([sb2.from('reactions').select('emoji').eq('game_id', gid)]);
+  const c = {}; EMOJIS2.forEach(e => c[e] = 0); (counts||[]).forEach(r => { if(c[r.emoji]!==undefined) c[r.emoji]++; });
+  document.getElementById('react-bar').innerHTML = EMOJIS2.map(e =>
+    '<button onclick="doReact2(\'' + gid + '\',\'' + e + '\')" style="background:rgba(255,255,255,0.05);border:1px solid #1e293b;border-radius:20px;padding:3px 10px;color:#fff;cursor:pointer;font-size:12px">' +
+    e + ' ' + (c[e]||0) + '<\/button>'
+  ).join('') + '<span style="flex:1"><\/span><span style="font-size:11px;color:#666">📝 ' + (g.description||'') + '<\/span>';
+
+  window.doReact2 = async (gid, emoji) => {
+    await sb2.from('reactions').insert({ game_id: gid, emoji });
+  };
+  return true;
+}
+
 async function openPlay(gid){
   edGID=gid;
   const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
@@ -1468,21 +1543,26 @@ async function issueWarn(uid2,card){
   const msgs={yellow:'🟡 イエローカードを発行します',red:'🔴 3日間停止します',blue:'🔵 永久停止します',green:'🟢 アカウントと全作品を削除します（取り消し不可）'};
   if(!confirm(`${msgs[card]}\n理由: ${reason||'理由なし'}`))return;
   closeM('m-warn');
-  if(card==='yellow'){
-    const { count } = await sb.from('warnings').select('*',{count:'exact',head:true}).eq('target_id',uid2).eq('card','yellow');
-    await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id});
-    if(count>=1){ await sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2); toast('イエロー2枚目→レッド昇格（3日停止）','s'); }
-    else toast('イエローカードを発行しました','s');
-  } else if(card==='red'){
-    await Promise.all([sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}),sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2)]);
-    toast('レッドカード：3日間停止','s');
-  } else if(card==='blue'){
-    await Promise.all([sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}),sb.from('profiles').update({banned:'blue'}).eq('id',uid2)]);
-    toast('ブルーカード：永久停止','s');
-  } else if(card==='green'){
-    await Promise.all([sb.from('games').delete().eq('author_id',uid2),sb.from('videos').delete().eq('author_id',uid2),sb.from('profiles').delete().eq('id',uid2)]);
-    toast('アカウントと全作品を削除しました','s');
-  }
+  try {
+    if(card==='yellow'){
+      let count = 0;
+      try { const r = await sb.from('warnings').select('*',{count:'exact',head:true}).eq('target_id',uid2).eq('card','yellow'); count = r.count||0; } catch(e){}
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      if(count>=1){ await sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2); toast('イエロー2枚目→レッド昇格（3日停止）','s'); }
+      else { await sb.from('profiles').update({banned:'yellow'}).eq('id',uid2); toast('イエローカードを発行しました','s'); }
+    } else if(card==='red'){
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      await sb.from('profiles').update({banned:'red',ban_until:new Date(Date.now()+3*24*3600*1000).toISOString()}).eq('id',uid2);
+      toast('レッドカード：3日間停止','s');
+    } else if(card==='blue'){
+      try { await sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}); } catch(e){}
+      await sb.from('profiles').update({banned:'blue'}).eq('id',uid2);
+      toast('ブルーカード：永久停止','s');
+    } else if(card==='green'){
+      await Promise.all([sb.from('games').delete().eq('author_id',uid2),sb.from('videos').delete().eq('author_id',uid2),sb.from('profiles').delete().eq('id',uid2)]);
+      toast('アカウントと全作品を削除しました','s');
+    }
+  } catch(e) { toast('エラー: '+e.message,'e'); }
   loadAdmin();
 }
 async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
