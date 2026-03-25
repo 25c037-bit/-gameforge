@@ -760,10 +760,13 @@ function renderSwitchModal(){
       <div class="sw-chip${ME?.username===a.uname?' cur':''}" onclick="quickSwitch(this.dataset.u,this.dataset.e,this.dataset.p)" data-u="${a.uname}" data-e="${a.email}" data-p="${a.pw}">
         <span style="font-size:1.1rem">${a.avatar||'🎮'}</span>
         <div style="flex:1"><div style="font-size:.82rem;font-weight:700">${a.displayName}</div><div style="font-size:.7rem;color:var(--tx3)">@${a.uname}</div></div>
-        ${ME?.username===a.uname?'<span style="font-size:.7rem;color:var(--accent)">現在</span>':'<span style="font-size:.7rem;color:var(--tx3);cursor:pointer" onclick="event.stopPropagation();removeAccount(this.closest('.sw-chip').dataset.u)">✕</span>'}
+        ${ME?.username===a.uname?'<span style="font-size:.7rem;color:var(--accent)">現在</span>':'<span style="font-size:.7rem;color:var(--tx3);cursor:pointer" onclick="removeAccount(event)">✕</span>'}
       </div>`).join('');
 }
-function removeAccount(uname){
+function removeAccount(e){
+  const uname=e.target.closest('.sw-chip')?.dataset.u;
+  if(!uname)return;
+  e.stopPropagation();
   const accounts=getSavedAccounts().filter(a=>a.uname!==uname);
   localStorage.setItem('ds_accounts',JSON.stringify(accounts));
   renderSavedAccounts();renderSwitchModal();
