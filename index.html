@@ -467,6 +467,7 @@ textarea.inp{resize:vertical;min-height:50px}
           <button class="atab2" onclick="swAdm('videos')">全動画</button>
           <button class="atab2" onclick="swAdm('search')">アカウント検索</button>
           <button class="atab2" onclick="swAdm('notice')">お知らせ投稿</button>
+          <button class="atab2" onclick="swAdm('maintenance')" style="border-color:#f59e0b;color:#f59e0b">🔧 メンテナンス</button>
         </div>
         <div id="adm-c"></div>
       </div>
@@ -638,6 +639,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 専用ゲームURLチェック
   if (await checkGameUrl()) return;
 
+  // メンテナンスチェック（ログイン前）
+  await checkMaintenance();
+
   // ローカルに保存されたセッションを復元
   const saved = localStorage.getItem('ds_session');
   if (saved) {
@@ -650,6 +654,43 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch(_) { localStorage.removeItem('ds_session'); }
   }
 });
+
+async function checkMaintenance() {
+  try {
+    const { data } = await sb.from('settings').select('*').eq('key','maintenance').single();
+    if (data?.value === 'true') {
+      // Show maintenance screen - admins can still log in
+      const msg = data.message || 'ただいまメンテナンス中です。しばらくお待ちください。';
+      document.getElementById('s-auth').innerHTML = `
+        <div style="position:relative;z-index:1;text-align:center;padding:2rem;max-width:500px;margin:auto">
+          <div style="font-size:4rem;margin-bottom:1rem">🔧</div>
+          <div style="font-family:var(--fh);font-size:1.5rem;color:var(--a3);margin-bottom:1rem">MAINTENANCE</div>
+          <p style="color:var(--tx2);line-height:1.8;font-size:.9rem;margin-bottom:2rem">${msg}</p>
+          <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.5rem;text-align:left">
+            <p style="font-size:.75rem;color:var(--tx3);margin-bottom:.8rem">管理者の方はこちら</p>
+            <div class="fg"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username"></div>
+            <div class="fg" style="margin-top:.5rem"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>
+            <div class="ferr" id="li-err" style="min-height:1em;margin:.3rem 0"></div>
+            <button class="btnp" onclick="authLoginAdmin()">管理者ログイン</button>
+          </div>
+        </div>
+        <div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>`;
+      window._maintenanceMode = true;
+    }
+  } catch(e) { /* settingsテーブルなければ無視 */ }
+}
+
+async function authLoginAdmin() {
+  const uname=$('li-u').value.trim(), pw=$('li-p').value;
+  const err=$('li-err'); err.textContent='';
+  if(!uname||!pw){err.textContent='入力してください';return;}
+  const hashed = await hashPw(pw);
+  const { data: prof } = await sb.from('profiles').select('*').eq('username',uname).eq('pw_hash',hashed).single();
+  if(!prof){err.textContent='ユーザー名またはパスワードが違います';return;}
+  if(prof.role !== 'admin'){err.textContent='管理者のみアクセスできます';return;}
+  saveAccount(uname, prof.display_name, prof.avatar, null, pw);
+  await initUser(prof);
+}
 
 async function initUser(prof) {
   ME = prof;
@@ -1477,7 +1518,7 @@ async function saveGH(){const gh=$('gh-u').value.trim();await sb.from('profiles'
 // ════════════════════════════════════════════
 //  ADMIN
 // ════════════════════════════════════════════
-function swAdm(t){admTab=t;document.querySelectorAll('.atab2').forEach((x,i)=>x.classList.toggle('on',['users','games','videos','search','notice'][i]===t));loadAdmin();}
+function swAdm(t){admTab=t;document.querySelectorAll('.atab2').forEach((x,i)=>x.classList.toggle('on',['users','games','videos','search','notice','maintenance'][i]===t));loadAdmin();}
 async function loadAdmin(){
   const c=$('adm-c');c.innerHTML='<div class="spin"></div>';
   if(admTab==='users'){
@@ -1486,7 +1527,7 @@ async function loadAdmin(){
       ${(users||[]).map(u=>`<tr><td>${u.avatar||'🎮'}</td><td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${u.id}')">${esc(u.username)}</span></td><td>${esc(u.display_name)}</td><td>${u.role==='admin'?'⚡ Admin':'User'}</td>
       <td>${u.banned==='blue'?'<span class="bdg bg-r">永久停止</span>':u.banned==='red'?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td>
       <td>${fd(u.created_at)}</td>
-      <td style="display:flex;gap:.3rem;flex-wrap:wrap">${u.id!==ME.id?`<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button>${u.banned!=='none'&&u.banned?`<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('${u.id}')">解除</button>`:''}${u.role!=='admin'?`<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('${u.id}')">⚡ 管理者</button>`:`<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('${u.id}')">管理者解除</button>`}`:'-'}</td></tr>`).join('')}
+      <td><div style="display:flex;gap:.3rem;flex-wrap:wrap">${u.id!==ME.id?`<button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button>${u.banned!=='none'&&u.banned?`<button class="bs bgn" style="font-size:.7rem" onclick="revokeWarn('${u.id}')">解除</button>`:''}${u.role!=='admin'?`<button class="bs ba" style="font-size:.7rem" onclick="grantAdmin('${u.id}')">⚡ 管理者</button>`:`<button class="bs bd2" style="font-size:.7rem" onclick="revokeAdmin('${u.id}')">管理者解除</button>`}`:'-'}</div></td></tr>`).join('')}
     </tbody></table>`;
   } else if(admTab==='games'){
     const { data: games } = await sb.from('games').select('*').order('updated_at',{ascending:false});
@@ -1496,7 +1537,7 @@ async function loadAdmin(){
     c.innerHTML=`<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>👁</th><th>操作</th></tr></thead><tbody>
       ${(vids||[]).map(v=>`<tr><td>${esc(v.title)}</td><td>${esc(v.author_name)}</td>
       <td>${v.flagged?'<span class="bdg bg-r">非表示</span>':'<span class="bdg bg-g">公開中</span>'}</td><td>${v.views||0}</td>
-      <td>${!v.flagged?`<button class="bs bd2" style="font-size:.7rem" onclick="admFlagV('${v.id}')">⚠ 非表示</button>`:'-'}</td></tr>`).join('')}
+      <td><div style="display:flex">${!v.flagged?`<button class="bs bd2" style="font-size:.7rem" onclick="admFlagV('${v.id}')">⚠ 非表示</button>`:'-'}</div></td></tr>`).join('')}
     </tbody></table>`;
   } else if(admTab==='search'){
     c.innerHTML=`<div style="display:flex;gap:.5rem;margin-bottom:.9rem"><input class="inp" type="text" id="adm-sq" placeholder="ユーザー名・表示名でピンポイント検索..."><button class="bs ba" onclick="admSearch()">検索</button></div><div id="adm-sr"></div>`;
@@ -1508,6 +1549,8 @@ async function loadAdmin(){
       <button class="bs ba" onclick="postNotice()">投稿する</button></div>
       <div id="nt-list"><div class="spin"></div></div>`;
     loadAdmNotices();
+  } else if(admTab==='maintenance'){
+    loadMaintenance();
   }
 }
 function renderAdmGames(games,container){
@@ -1517,16 +1560,16 @@ function renderAdmGames(games,container){
     <td><span style="cursor:pointer;color:var(--accent)" onclick="showProfile('${g.author_id}')">${esc(g.author_name)}</span></td>
     <td>${g.flagged?`<span class="bdg bg-r">⚠ ${esc(g.flag_reason||'通報済')}</span>`:g.is_published?'<span class="bdg bg-g">公開中</span>':'<span class="bdg bg-x">下書き</span>'}</td>
     <td>${g.plays||0}</td>
-    <td style="display:flex;gap:.28rem;flex-wrap:wrap;align-items:center">
+    <td><div style="display:flex;gap:.28rem;flex-wrap:wrap;align-items:center">
       <button class="bs bg" style="font-size:.7rem" onclick="admSrc('${g.id}')">💻 コード</button>
       <button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${g.author_id}')">⚠ 作者に警告</button>
       ${g.flagged
         ?`<button class="bs bgn" style="font-size:.7rem" onclick="admUnflag('${g.id}')">✅ 非表示解除</button>`
         :`<button class="bs bd2" style="font-size:.7rem" onclick="admFlag('${g.id}')">🚫 非表示</button>`}
-    </td></tr>`).join('')}
+    </div></td></tr>`).join('')}
   </tbody></table>`;
 }
-async function admSearch(){const q=$('adm-sq').value.trim();const { data } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%`);const el=$('adm-sr');if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.82rem">見つかりませんでした</p>';return;}el.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>状態</th><th>操作</th></tr></thead><tbody>${data.map(u=>`<tr><td>${u.avatar||'🎮'}</td><td>${esc(u.username)}</td><td>${esc(u.display_name)}</td><td>${u.banned!=='none'&&u.banned?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td><td><button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button></td></tr>`).join('')}</tbody></table>`;}
+async function admSearch(){const q=$('adm-sq').value.trim();const { data } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%`);const el=$('adm-sr');if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.82rem">見つかりませんでした</p>';return;}el.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>状態</th><th>操作</th></tr></thead><tbody>${data.map(u=>`<tr><td>${u.avatar||'🎮'}</td><td>${esc(u.username)}</td><td>${esc(u.display_name)}</td><td>${u.banned!=='none'&&u.banned?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td><td><div style="display:flex;gap:.3rem"><button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button></div></td></tr>`).join('')}</tbody></table>`;}
 async function admSrc(gid){const { data: g } = await sb.from('games').select('html,css,js,title').eq('id',gid).single();if(!g)return;$('src-c').innerHTML=`<div style="margin-bottom:.35rem"><span class="bdg bg-g">HTML</span></div><div class="srcv"><pre>${esc(g.html)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-y">CSS</span></div><div class="srcv"><pre>${esc(g.css)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-x">JS</span></div><div class="srcv"><pre>${esc(g.js)}</pre></div>`;openM('m-source');}
 async function admFlag(gid){const r=prompt('通報理由:');if(r===null)return;await sb.from('games').update({flagged:true,flag_reason:r,is_published:false}).eq('id',gid);toast('通報しました','s');loadAdmin();}
 async function admUnflag(gid){await sb.from('games').update({flagged:false,flag_reason:''}).eq('id',gid);toast('解除しました','s');loadAdmin();}
@@ -1581,6 +1624,102 @@ async function issueWarn(uid2,card){
 async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
 async function grantAdmin(uid2){if(!confirm('このユーザーに管理者権限を付与しますか？'))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
 async function revokeAdmin(uid2){if(!confirm('管理者権限を解除しますか？'))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
+
+// ════════════════════════════════════════════
+//  MAINTENANCE
+// ════════════════════════════════════════════
+async function loadMaintenance(){
+  const c=$('adm-c');
+  // Get current maintenance state
+  const { data: mData } = await sb.from('settings').select('*').eq('key','maintenance').single().catch(()=>({data:null}));
+  const isOn = mData?.value === 'true';
+
+  c.innerHTML=`
+    <div class="ssec" style="margin-bottom:.8rem">
+      <div class="stitle">🔧 メンテナンスモード</div>
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <div style="width:14px;height:14px;border-radius:50%;background:${isOn?'var(--red)':'var(--green)'}"></div>
+        <span style="font-size:.9rem;font-weight:700">${isOn?'🔴 メンテナンス中':'🟢 通常稼働中'}</span>
+      </div>
+      <p style="font-size:.8rem;color:var(--tx2);margin-bottom:1rem;line-height:1.6">
+        メンテナンスモードをオンにすると、管理者以外のユーザーはサイトにアクセスできなくなります。
+      </p>
+      <div class="fg"><label class="mlbl">メンテナンス中のメッセージ</label>
+        <textarea class="inp" id="maint-msg" rows="3" placeholder="例: ただいまメンテナンス中です。しばらくお待ちください。">${mData?.message||''}</textarea>
+      </div>
+      <div style="display:flex;gap:.6rem;margin-top:.8rem">
+        ${isOn
+          ?`<button class="bs bgn" onclick="setMaintenance(false)" style="font-size:.82rem;padding:.7rem 1.4rem">✅ メンテナンス終了</button>`
+          :`<button class="bs bd2" onclick="setMaintenance(true)" style="font-size:.82rem;padding:.7rem 1.4rem">🔧 メンテナンス開始</button>`}
+      </div>
+    </div>
+
+    <div class="ssec">
+      <div class="stitle">⏸ ゲーム個別停止</div>
+      <p style="font-size:.78rem;color:var(--tx2);margin-bottom:.8rem">停止したいゲームを選んで期間を指定してください</p>
+      <div id="game-suspend-list"><div class="spin"></div></div>
+    </div>`;
+
+  loadGameSuspendList();
+}
+
+async function setMaintenance(on){
+  const msg = $('maint-msg')?.value || '';
+  const { error } = await sb.from('settings').upsert({key:'maintenance', value:String(on), message:msg},{onConflict:'key'});
+  if(error){
+    // settingsテーブルがなければ作成を促す
+    toast('settingsテーブルが必要です。SQLを実行してください','e');
+    return;
+  }
+  toast(on?'🔧 メンテナンスモードを開始しました':'✅ メンテナンスを終了しました', on?'e':'s');
+  loadMaintenance();
+}
+
+async function loadGameSuspendList(){
+  const el=$('game-suspend-list');if(!el)return;
+  const { data: games } = await sb.from('games').select('id,title,author_name,is_published,suspended_until').order('updated_at',{ascending:false});
+  if(!games?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--tx3)">ゲームがありません</p>';return;}
+  el.innerHTML=`<table class="atbl"><thead><tr><th>タイトル</th><th>作者</th><th>状態</th><th>停止期限</th><th>操作</th></tr></thead><tbody>
+    ${games.map(g=>{
+      const suspended = g.suspended_until && new Date(g.suspended_until) > new Date();
+      const until = g.suspended_until ? new Date(g.suspended_until).toLocaleDateString('ja-JP') : '-';
+      return `<tr>
+        <td>${esc(g.title)}</td>
+        <td>${esc(g.author_name)}</td>
+        <td>${suspended?'<span class="bdg bg-r">停止中</span>':g.is_published?'<span class="bdg bg-g">公開中</span>':'<span class="bdg bg-x">下書き</span>'}</td>
+        <td style="font-size:.75rem">${suspended?until:'-'}</td>
+        <td><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
+          ${suspended
+            ?`<button class="bs bgn" style="font-size:.7rem" onclick="unsuspendGame('${g.id}')">▶ 停止解除</button>`
+            :`<select id="suspend-days-${g.id}" style="padding:3px 6px;background:var(--bg4);border:1px solid var(--bd2);border-radius:4px;color:var(--tx);font-size:.72rem">
+                <option value="1">1日</option>
+                <option value="3">3日</option>
+                <option value="7">7日</option>
+                <option value="30">30日</option>
+                <option value="999">無期限</option>
+              </select>
+              <button class="bs bd2" style="font-size:.7rem" onclick="suspendGame('${g.id}')">⏸ 停止</button>`
+          }
+        </div></td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+async function suspendGame(gid){
+  const sel = $(`suspend-days-${gid}`);
+  const days = parseInt(sel?.value||'1');
+  const until = days===999 ? new Date('2099-01-01').toISOString() : new Date(Date.now()+days*24*3600*1000).toISOString();
+  const { error } = await sb.from('games').update({suspended_until:until, is_published:false}).eq('id',gid);
+  if(error){toast('エラー: '+error.message,'e');return;}
+  toast(`⏸ ${days===999?'無期限':days+'日間'}停止しました`,'s');
+  loadGameSuspendList();
+}
+
+async function unsuspendGame(gid){
+  await sb.from('games').update({suspended_until:null, is_published:true}).eq('id',gid);
+  toast('▶ 停止を解除しました','s');
+  loadGameSuspendList();
+}
 
 async function loadAdmNotices(){const el=$('nt-list');if(!el)return;el.innerHTML='<div class="spin"></div>';const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);el.innerHTML='';if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.8rem">お知らせはありません</p>';return;}data.forEach(n=>{const d=document.createElement('div');d.className='ncard';d.innerHTML=`<div class="ntitle">${esc(n.title)}<button class="bs bd2" onclick="delNotice('${n.id}')" style="font-size:.68rem;padding:.15rem .42rem;margin-left:auto">削除</button></div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;el.appendChild(d);});}
 async function postNotice(){const t=$('nt-t').value.trim(),b=$('nt-b').value.trim(),tp=$('nt-tp').value;if(!t||!b){toast('タイトルと本文を入力してください','e');return;}await sb.from('notices').insert({title:t,body:b,type:tp,author_id:ME.id});toast('お知らせを投稿しました！','s');$('nt-t').value='';$('nt-b').value='';loadAdmNotices();}
