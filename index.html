@@ -301,14 +301,12 @@ textarea.inp{resize:vertical;min-height:50px}
   <div class="awrap">
     <div class="logo"><div class="logo-i">⬡</div><div class="logo-t">D·STUDIO</div><div class="logo-s">CODE · CREATE · SHARE</div></div>
     <div class="acard">
-
       <div class="atabs"><button class="atab on" onclick="swATab('li')">ログイン</button><button class="atab" onclick="swATab('re')">新規登録</button></div>
       <div id="af-li" class="aform on">
         <div class="fg"><label>ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username" autocomplete="off"></div>
         <div class="fg"><label>パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>
         <div class="ferr" id="li-err"></div>
         <button class="btnp" id="btn-li" onclick="authLogin()">ログイン</button>
-
       </div>
       <div id="af-re" class="aform">
         <div class="fg"><label>パスワード（6文字以上）</label><input class="inp" type="password" id="re-p" placeholder="••••••••"></div>
@@ -574,13 +572,13 @@ const { createClient } = supabase;
 const sb = createClient(SUPA_URL, SUPA_KEY);
 
 // ── State ────────────────────────────────────
-let ME = null; // 現在のprofile行
+let ME = null;
 let edGID = null, curAu = null, curDMP = null, curDMPAv = null;
 let tlOff = 0, tlQ = '', vidOff = 0, vidQ = '';
 let editors = {}, edFiles = {}, activeTab = null, saveTimer = null;
 let pageStack = [], curPage = 'timeline';
 let admTab = 'users', rqTarget = null;
-let dmSub = null; // Realtime subscription
+let dmSub = null;
 
 // ── Utils ────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -599,7 +597,6 @@ document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e
 // ── Nav ──────────────────────────────────────
 function go(page, data=null) {
   if(page !== curPage) pageStack.push(curPage);
-  // エディタ離れたらDBパネル・DBウォッチャー削除
   if(curPage==='editor'&&page!=='editor'){
     const p=document.getElementById('db-live-panel');if(p)p.remove();
     if(dbWatcher){sb.removeChannel(dbWatcher);dbWatcher=null;}
@@ -624,7 +621,6 @@ function goBack() { const p=pageStack.pop(); go(p||'timeline'); }
 //  AUTH
 // ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Avatar selector
   $('avs').addEventListener('click', e => {
     const o=e.target.closest('.avo'); if(!o)return;
     document.querySelectorAll('.avo').forEach(x=>x.classList.remove('on')); o.classList.add('on');
@@ -633,7 +629,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('li-u').addEventListener('keydown', e => e.key==='Enter' && $('li-p').focus());
   $('re-p').addEventListener('keydown', e => e.key==='Enter' && authRegister());
 
-  // Auth state
   const { data: { session } } = await sb.auth.getSession();
   if (session) await initUser(session.user);
 
@@ -644,10 +639,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initUser(user) {
-  // profileを取得 or 作成
   let { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single();
   if (!prof) {
-    // 新規ユーザー: profileを作成（Google登録時）
     const base = (user.email||'user').split('@')[0].replace(/[^a-zA-Z0-9_]/g,'').slice(0,15)||'user';
     let uname = base, n = 1;
     while(true) {
@@ -657,7 +650,7 @@ async function initUser(user) {
     const { data: newProf } = await sb.from('profiles').insert({
       id: user.id, username: uname,
       display_name: user.user_metadata?.full_name || uname,
-      avatar: user.user_metadata?.avatar_url ? '🎮' : '🎮',
+      avatar: '🎮',
     }).select().single();
     prof = newProf;
   }
@@ -682,18 +675,17 @@ function swATab(t) {
   $('af-re').classList.toggle('on',t==='re');
 }
 
-// Google認証は無効化
-
 async function authLogin() {
   const uname=$('li-u').value.trim(), pw=$('li-p').value;
   const err=$('li-err'); err.textContent='';
   if(!uname||!pw){err.textContent='入力してください';return;}
   const b=$('btn-li'); b.disabled=true; b.textContent='...';
-  // ユーザー名からメールを取得してログイン
-  const { data: prof } = await sb.from('profiles').select('id').eq('username',uname).single();
-  if(!prof){err.textContent='ユーザーが見つかりません';b.disabled=false;b.textContent='ログイン';return;}
-  // ダミーメールでログイン
-  const dummyEmail = uname + '@gameforge.local';
+
+  // ★ 修正: auth_emailをDBから取得してログイン
+  const { data: profData } = await sb.from('profiles').select('auth_email').eq('username', uname).single();
+  if(!profData?.auth_email){err.textContent='ユーザーが見つかりません';b.disabled=false;b.textContent='ログイン';return;}
+  const dummyEmail = profData.auth_email;
+
   const { error } = await sb.auth.signInWithPassword({ email: dummyEmail, password: pw });
   if (error) err.textContent = 'ユーザー名またはパスワードが違います';
   b.disabled=false; b.textContent='ログイン';
@@ -709,7 +701,6 @@ async function authRegister() {
   const { data: ex } = await sb.from('profiles').select('id').eq('username',uname).single();
   if(ex){err.textContent='このユーザー名は既に使われています';return;}
   const b=$('btn-re'); b.disabled=true; b.textContent='...';
-  // メールを完全に隠蔽 - ランダムUUID使用
   const hiddenEmail = 'u' + crypto.randomUUID().replace(/-/g,'') + '@ds.app';
   const { data, error } = await sb.auth.signUp({ email: hiddenEmail, password: pw });
   if(error){err.textContent=error.message;b.disabled=false;b.textContent='アカウント作成';return;}
@@ -721,11 +712,8 @@ async function authRegister() {
   b.disabled=false; b.textContent='アカウント作成';
 }
 
-// パスワードリセットは無効化
-
 async function authLogout() {
   if(dmSub) sb.removeChannel(dmSub);
-  // 現在のアカウントをsavedAccountsから削除してサインアウト
   await sb.auth.signOut();
   ME=null;
   showScr('auth');
@@ -790,8 +778,7 @@ async function switchLogin(){
   if(dmSub){sb.removeChannel(dmSub);dmSub=null;}
   await sb.auth.signOut();
   const {error}=await sb.auth.signInWithPassword({email:prof.auth_email,password:pw});
-  if(error){e.textContent='パスワードが違います';// 元のアカウントに戻る処理は省略
-  return;}
+  if(error){e.textContent='パスワードが違います';return;}
   saveAccount(uname,prof.display_name,prof.avatar,prof.auth_email,pw);
   closeM('m-switch');toast(`@${uname} に切り替えました`,'s');
 }
@@ -799,7 +786,7 @@ async function switchLogin(){
 function showScr(n) { document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===`s-${n}`)); }
 
 // ════════════════════════════════════════════
-//  BADGES (バックグラウンド)
+//  BADGES
 // ════════════════════════════════════════════
 async function loadBadges() {
   if(!ME) return;
@@ -984,14 +971,8 @@ async function openEditor(gid){
 }
 
 function setupPythonEditor(g){
-  // Python用: タブはmain.pyのみ
   edFiles={py:{name:'main.py',mode:'python',content:g.js||'print("Hello!")'} };
-  // CSSモードを追加
-  if(!CodeMirror.modes.python){
-    // pythonモードがなければjavascriptで代用（構文ハイライト近似）
-  }
   renderTabs();switchTab('py');
-  // プレビューをPython実行エリアに切り替え
   $('pv-frame').style.display='none';
   let pvwrap=$('pv-frame').parentElement;
   if(!document.getElementById('py-area')){
@@ -1026,10 +1007,7 @@ async function runPython(){
   }
   const code=editors['py']?editors['py'].getValue():(edFiles.py?.content||'');
   out.innerHTML='';
-  const logs=[];
-  pyodideInstance.globals.set('print_capture',(txt)=>logs.push(txt));
   try{
-    // printをキャプチャ
     await pyodideInstance.runPythonAsync(`
 import sys
 from io import StringIO
@@ -1037,19 +1015,6 @@ _buf=StringIO()
 sys.stdout=_buf
 sys.stderr=_buf
 `);
-    if(currentUseDb){
-      // GF DB APIをPythonに注入
-      await pyodideInstance.runPythonAsync(`
-from pyodide.ffi import to_js
-import js
-class _GF:
-    async def set(self,k,v):
-        await js.GF_set(k,str(v))
-    async def get(self,k):
-        return await js.GF_get(k)
-GF=_GF()
-`);
-    }
     await pyodideInstance.runPythonAsync(code);
     const result=await pyodideInstance.runPythonAsync('_buf.getvalue()');
     const lines=(result||'').split('\n');
@@ -1062,10 +1027,8 @@ GF=_GF()
 }
 function clearPyOut(){const o=$('py-out');if(o)o.innerHTML='';}
 
-// ── DB パネル ─────────────────────────────────────────────────
 let dbWatcher=null;
 async function setupDbPanel(gid){
-  // DBパネルをエディタ下部またはプレビュー下に表示
   const existingPanel=document.getElementById('db-live-panel');
   if(existingPanel)existingPanel.remove();
   const panel=document.createElement('div');
@@ -1073,18 +1036,15 @@ async function setupDbPanel(gid){
   panel.style.cssText='position:fixed;bottom:1rem;right:1rem;width:280px;z-index:50;max-height:200px;overflow-y:auto';
   panel.innerHTML=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem"><span style="font-size:.78rem;font-weight:700;color:var(--accent)">🗄️ リアルタイムDB</span><button class="bs bg" onclick="this.closest('#db-live-panel').remove()" style="font-size:.65rem;margin-left:auto">✕</button></div><div id="db-rows"><span style="font-size:.75rem;color:var(--tx3)">データなし</span></div>`;
   document.body.appendChild(panel);
-  // リアルタイム購読
   if(dbWatcher)sb.removeChannel(dbWatcher);
   loadDbData(gid);
   dbWatcher=sb.channel('db-'+gid).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`game_id=eq.${gid}`},()=>loadDbData(gid)).subscribe();
-  // JS/Python用グローバルAPI注入
   window.GF={
     set:async(k,v)=>{await sb.from('game_db').upsert({game_id:gid,key:k,value:String(v)},{onConflict:'game_id,key'});return v;},
     get:async(k)=>{const {data}=await sb.from('game_db').select('value').eq('game_id',gid).eq('key',k).single();return data?.value??null;},
     watch:(k,cb)=>{sb.channel('gfdb-'+k).on('postgres_changes',{event:'*',schema:'public',table:'game_db',filter:`key=eq.${k}`},p=>cb(p.new?.value)).subscribe();},
     delete:async(k)=>{await sb.from('game_db').delete().eq('game_id',gid).eq('key',k);}
   };
-  // iframeにGFを橋渡し
   window.GF_set=async(k,v)=>window.GF.set(k,v);
   window.GF_get=async(k)=>window.GF.get(k);
 }
@@ -1127,13 +1087,11 @@ function checkErrors(){
   ov.classList.toggle('hide',!errs.length);el.innerHTML=errs.map(e=>`<div class="erl">${esc(e)}</div>`).join('');
 }
 function refreshPV(){
-  if(currentLang==='python') return; // Pythonは別途runPythonで実行
+  if(currentLang==='python') return;
   if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
   const h=edFiles.html?.content||'',c=edFiles.css?.content||'',j=edFiles.js?.content||'';
   let ex='';Object.entries(edFiles).forEach(([k,f])=>{if(['html','css','js'].includes(k))return;if(f.mode==='css')ex+=`<style>${f.content}</style>`;else if(f.mode==='javascript')ex+=`<script>${f.content}<\/script>`;else ex+=f.content;});
-  // GFのDB橋渡し
   const gfBridge=currentUseDb&&edGID?`<script>
-    const _sb=window.parent.GF;
     window.GF={
       set:(k,v)=>window.parent.GF.set(k,v),
       get:(k)=>window.parent.GF.get(k),
@@ -1188,18 +1146,14 @@ async function openPlay(gid){
   $('pl-desc').textContent=g.description||'説明なし';$('pl-how').textContent=g.how_to_play||'説明なし';
   $('pl-ed').style.display=ME?.id===g.author_id?'':'none';
   $('pl-adm').style.display=ME?.role==='admin'?'':'none';
-  // フォローボタン
   const fb=$('pl-fb');
   if(ME&&ME.id!==g.author_id){
     const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id',ME.id).eq('following_id',g.author_id).single();
     fb.innerHTML=`<button class="bs ${fw?'bg':'ba'}" onclick="doFollow('${g.author_id}',this)">${fw?'フォロー中':'フォロー'}</button>`;
   } else fb.innerHTML='';
-  // iframe
   let ex='';Object.values(g.files||{}).forEach(f=>{if(f.mode==='css')ex+=`<style>${f.content}</style>`;else if(f.mode==='javascript')ex+=`<script>${f.content}<\/script>`;else ex+=f.content;});
   $('pframe').srcdoc=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${g.css||''}</style></head><body>${g.html||''}${ex}<script>${g.js||''}<\/script></body></html>`;
-  // reactions
   await loadReactPlay(gid);
-  // view count
   sb.from('games').update({plays:(g.plays||0)+1}).eq('id',gid);
 }
 async function loadReactPlay(gid){
@@ -1264,7 +1218,6 @@ async function showProfile(uid2){
     </div>
     <div class="prfact">${followBtn}${dmBtn}${rqBtn}${blockBtn}${adminBtn}</div>
   </div>`;
-  // games/videos
   const [{ data: games },{ data: vids }] = await Promise.all([
     sb.from('games').select('*').eq('author_id',uid2).eq('is_published',true).eq('flagged',false),
     sb.from('videos').select('*').eq('author_id',uid2).eq('flagged',false)
@@ -1277,11 +1230,10 @@ function rpItems(t){const grid=$('prf-items');grid.innerHTML='';const items=t===
 function showMyProfile(){if(ME)showProfile(ME.id);}
 
 // ════════════════════════════════════════════
-//  DM (Realtime WebSocket)
+//  DM
 // ════════════════════════════════════════════
 async function loadDMList(){
   const list=$('dmlist');list.innerHTML='<div style="padding:.8rem;color:var(--tx3);font-size:.8rem"><div class="spin"></div></div>';
-  // 相互フォロー取得
   const { data: fw } = await sb.from('follows').select('following_id').eq('follower_id',ME.id);
   const fwIds=(fw||[]).map(x=>x.following_id);
   if(!fwIds.length){list.innerHTML='<div style="padding:1rem;color:var(--tx3);font-size:.8rem">相互フォロー中の相手がいません</div>';return;}
@@ -1307,7 +1259,6 @@ async function openDMChat(uid2,name,av){
   $('dmchd').innerHTML=`<span class="dmav">${av}</span><span style="font-weight:700;font-size:.88rem">${esc(name)}</span><button class="bs bg" onclick="doBlock('${uid2}')" style="font-size:.7rem;margin-left:auto">🚫 ブロック</button>`;
   $('dm-inp-area').style.display='';
   await loadMsgs(uid2);
-  // Realtime subscription
   if(dmSub) sb.removeChannel(dmSub);
   dmSub=sb.channel(`dm-${[ME.id,uid2].sort().join('-')}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'dms',filter:`to_id=eq.${ME.id}`},async(payload)=>{
     if(payload.new.from_id===curDMP) appendMsg(payload.new,false);
@@ -1320,7 +1271,6 @@ async function loadMsgs(uid2){
   if(!data?.length){msgs.innerHTML='<div class="dmemp">まだメッセージがありません 👋</div>';return;}
   data.forEach(m=>appendMsg(m,m.from_id===ME.id));
   msgs.scrollTop=msgs.scrollHeight;
-  // 既読
   sb.from('dms').update({read:true}).eq('to_id',ME.id).eq('from_id',uid2).eq('read',false);
   loadBadges();
 }
@@ -1425,14 +1375,12 @@ function previewAvatar(input){
   const reader=new FileReader();
   reader.onload=e=>{$('av-img').src=e.target.result;$('av-preview').style.display='';};
   reader.readAsDataURL(file);
-  // 絵文字選択を解除
   document.querySelectorAll('#set-av .avo').forEach(o=>o.classList.remove('on'));
 }
 async function saveProf(){
   const name=$('sn').value.trim(),bio=$('sb-bio').value;
   let av=document.querySelector('#set-av .avo.on')?.dataset.v||ME.avatar;
   const b=event.target;b.disabled=true;b.textContent='保存中...';
-  // 画像アップロード処理
   const file=$('av-file')?.files[0];
   if(file){
     const ext=file.name.split('.').pop();
@@ -1440,7 +1388,7 @@ async function saveProf(){
     const {error:se}=await sb.storage.from('avatars').upload(path,file,{upsert:true,contentType:file.type});
     if(!se){
       const {data:url}=sb.storage.from('avatars').getPublicUrl(path);
-      av=url.publicUrl+'?t='+Date.now(); // キャッシュ防止
+      av=url.publicUrl+'?t='+Date.now();
     }
   }
   const {error}=await sb.from('profiles').update({display_name:name,bio,avatar:av}).eq('id',ME.id);
@@ -1502,11 +1450,10 @@ async function admSrc(gid){const { data: g } = await sb.from('games').select('ht
 async function admFlag(gid){const r=prompt('通報理由:');if(r===null)return;await sb.from('games').update({flagged:true,flag_reason:r,is_published:false}).eq('id',gid);toast('通報しました','s');loadAdmin();}
 async function admUnflag(gid){await sb.from('games').update({flagged:false,flag_reason:''}).eq('id',gid);toast('解除しました','s');loadAdmin();}
 async function admFlagV(vid){if(!confirm('非表示にしますか？'))return;await sb.from('videos').update({flagged:true}).eq('id',vid);toast('非表示にしました','s');loadAdmin();}
-async function adminGameAct(gid){const { data: g } = await sb.from('games').select('*').eq('id',gid).single();if(!g)return;$('adm-c').innerHTML='';$('adm-game-c').innerHTML=`<p style="font-size:.82rem;color:var(--tx2)">タイトル: <strong>${esc(g.title)}</strong></p><p style="font-size:.82rem;color:var(--tx2);margin-top:.3rem">作者: ${esc(g.author_name)}</p><div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.8rem"><button class="bs bg" onclick="admSrc('${gid}');closeM('m-adm-game')">💻 ソース</button>${g.flagged?`<button class="bs ba" onclick="admUnflag('${gid}');closeM('m-adm-game')">解除</button>`:`<button class="bs bd2" onclick="admFlag('${gid}');closeM('m-adm-game')">⚠ 通報</button>`}<button class="bs bg" onclick="openWarnModal('${g.author_id}');closeM('m-adm-game')" style="font-size:.7rem">⚠ 作者に警告</button></div>`;}
+async function adminGameAct(gid){const { data: g } = await sb.from('games').select('*').eq('id',gid).single();if(!g)return;}
 
-// ── Warnings ─────────────────────────────────
 function openWarnModal(uid2){
-  $('warn-c').innerHTML=`<p style="font-size:.84rem;color:var(--tx2);margin-bottom:.9rem">@${uid2.slice(0,8)}... への警告カードを選択してください</p>
+  $('warn-c').innerHTML=`<p style="font-size:.84rem;color:var(--tx2);margin-bottom:.9rem">警告カードを選択してください</p>
     <div class="fg"><label class="mlbl">理由</label><input class="inp" type="text" id="w-reason" placeholder="警告の理由..."></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
       <button class="bs bg" style="border-color:var(--a3);color:var(--a3);padding:.6rem;flex-direction:column;height:auto" onclick="issueWarn('${uid2}','yellow')">🟡 イエロー<span style="font-size:.66rem;opacity:.8;margin-top:.2rem">注意（2枚でレッド）</span></button>
@@ -1534,7 +1481,7 @@ async function issueWarn(uid2,card){
     await Promise.all([sb.from('warnings').insert({target_id:uid2,card,reason,issued_by:ME.id}),sb.from('profiles').update({banned:'blue'}).eq('id',uid2)]);
     toast('ブルーカード：永久停止','s');
   } else if(card==='green'){
-    await Promise.all([sb.from('games').delete().eq('author_id',uid2),sb.from('videos').delete().eq('author_id',uid2),sb.from('profiles').delete().eq('id',uid2),sb.auth.admin?.deleteUser(uid2)]);
+    await Promise.all([sb.from('games').delete().eq('author_id',uid2),sb.from('videos').delete().eq('author_id',uid2),sb.from('profiles').delete().eq('id',uid2)]);
     toast('アカウントと全作品を削除しました','s');
   }
   loadAdmin();
@@ -1543,7 +1490,6 @@ async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))re
 async function grantAdmin(uid2){if(!confirm('このユーザーに管理者権限を付与しますか？'))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
 async function revokeAdmin(uid2){if(!confirm('管理者権限を解除しますか？'))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
 
-// ── Admin Notices ─────────────────────────────
 async function loadAdmNotices(){const el=$('nt-list');if(!el)return;el.innerHTML='<div class="spin"></div>';const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);el.innerHTML='';if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.8rem">お知らせはありません</p>';return;}data.forEach(n=>{const d=document.createElement('div');d.className='ncard';d.innerHTML=`<div class="ntitle">${esc(n.title)}<button class="bs bd2" onclick="delNotice('${n.id}')" style="font-size:.68rem;padding:.15rem .42rem;margin-left:auto">削除</button></div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;el.appendChild(d);});}
 async function postNotice(){const t=$('nt-t').value.trim(),b=$('nt-b').value.trim(),tp=$('nt-tp').value;if(!t||!b){toast('タイトルと本文を入力してください','e');return;}await sb.from('notices').insert({title:t,body:b,type:tp,author_id:ME.id});toast('お知らせを投稿しました！','s');$('nt-t').value='';$('nt-b').value='';loadAdmNotices();}
 async function delNotice(id){if(!confirm('削除しますか？'))return;await sb.from('notices').delete().eq('id',id);toast('削除しました','s');loadAdmNotices();}
