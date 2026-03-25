@@ -657,26 +657,25 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function checkMaintenance() {
   try {
-    const { data } = await sb.from('settings').select('*').eq('key','maintenance').single();
-    if (data?.value === 'true') {
-      // Show maintenance screen - admins can still log in
-      const msg = data.message || 'ただいまメンテナンス中です。しばらくお待ちください。';
-      document.getElementById('s-auth').innerHTML = `
-        <div style="position:relative;z-index:1;text-align:center;padding:2rem;max-width:500px;margin:auto">
-          <div style="font-size:4rem;margin-bottom:1rem">🔧</div>
-          <div style="font-family:var(--fh);font-size:1.5rem;color:var(--a3);margin-bottom:1rem">MAINTENANCE</div>
-          <p style="color:var(--tx2);line-height:1.8;font-size:.9rem;margin-bottom:2rem">${msg}</p>
-          <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.5rem;text-align:left">
-            <p style="font-size:.75rem;color:var(--tx3);margin-bottom:.8rem">管理者の方はこちら</p>
-            <div class="fg"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username"></div>
-            <div class="fg" style="margin-top:.5rem"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>
-            <div class="ferr" id="li-err" style="min-height:1em;margin:.3rem 0"></div>
-            <button class="btnp" onclick="authLoginAdmin()">管理者ログイン</button>
-          </div>
-        </div>
-        <div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>`;
-      window._maintenanceMode = true;
-    }
+    const res = await sb.from('settings').select('value,message').eq('key','maintenance').maybeSingle();
+    if (!res || !res.data || res.data.value !== 'true') return;
+    const msg = res.data.message || 'ただいまメンテナンス中です。しばらくお待ちください。';
+    const el = document.getElementById('s-auth');
+    if (!el) return;
+    el.innerHTML =
+      '<div class="abg"><div class="agrid"></div><div class="aorb aorb1"></div><div class="aorb aorb2"></div></div>'
+      +'<div style="position:relative;z-index:1;text-align:center;padding:2rem;max-width:500px;width:100%">'
+      +'<div style="font-size:4rem;margin-bottom:1rem">🔧</div>'
+      +'<div style="font-family:var(--fh);font-size:1.5rem;color:var(--a3);margin-bottom:1rem">MAINTENANCE</div>'
+      +'<p style="color:var(--tx2);line-height:1.8;font-size:.9rem;margin-bottom:2rem">'+msg+'</p>'
+      +'<div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.5rem;text-align:left">'
+      +'<p style="font-size:.75rem;color:var(--tx3);margin-bottom:.8rem">管理者の方はこちら</p>'
+      +'<div class="fg"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">ユーザー名</label><input class="inp" type="text" id="li-u" placeholder="username"></div>'
+      +'<div class="fg" style="margin-top:.5rem"><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:.3rem">パスワード</label><input class="inp" type="password" id="li-p" placeholder="••••••••"></div>'
+      +'<div class="ferr" id="li-err" style="min-height:1em;margin:.3rem 0"></div>'
+      +'<button class="btnp" onclick="authLoginAdmin()">管理者ログイン</button>'
+      +'</div></div>';
+    window._maintenanceMode = true;
   } catch(e) { /* settingsテーブルなければ無視 */ }
 }
 
@@ -705,7 +704,7 @@ function applyUser() {
   if(ME.avatar&&ME.avatar.startsWith('http')){$('sb-av').innerHTML=`<img src="${ME.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`;}else{$('sb-av').textContent=ME.avatar||'🎮';}
   $('sb-n').textContent = ME.display_name;
   $('sb-r').textContent = ME.role==='admin'?'⚡ Admin':'Player';
-  if (ME.role==='admin') $('ni-adm').style.display='';
+  $('ni-adm').style.display = ME.role==='admin' ? '' : 'none';
   renderSavedAccounts();
 }
 
