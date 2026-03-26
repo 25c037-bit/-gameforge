@@ -1159,17 +1159,37 @@ async function doSave(){
   const { error } = await sb.from('games').update(updateData).eq('id',edGID);
   setSst(error?'e':'s');
 }
-async function handleDeploy(){await doSave();const { data: g } = await sb.from('games').select('current_version').eq('id',edGID).single();$('dep-i').textContent=`現在: v${g?.current_version||0} → v${(g?.current_version||0)+1} として公開`;openM('m-deploy');}
+async function handleDeploy(){
+  const btn=document.querySelector('button[onclick="handleDeploy()"]');
+  if(btn){btn.disabled=true;btn.textContent='⏳ 準備中...';}
+  await doSave();
+  const { data: g } = await sb.from('games').select('current_version').eq('id',edGID).single();
+  $('dep-i').textContent=`現在: v${g?.current_version||0} → v${(g?.current_version||0)+1} として公開`;
+  if(btn){btn.disabled=false;btn.textContent='🚀 公開';}
+  openM('m-deploy');
+}
+let _deploying=false;
 async function confirmDeploy(){
+  if(_deploying)return;
+  _deploying=true;
+  const btn=document.querySelector('#m-deploy .bs.ba');
+  if(btn){btn.disabled=true;btn.textContent='⏳ 公開中...';}
   closeM('m-deploy');
-  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
-  const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
-  const { data: g } = await sb.from('games').select('*').eq('id',edGID).single();
-  const newVer=(g.current_version||0)+1;
-  const ver={version:newVer,html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,files:ex,title:$('ed-t').value,deployedAt:new Date().toISOString()};
-  const versions=[...(g.versions||[]),ver];
-  await sb.from('games').update({is_published:true,published_version:newVer,current_version:newVer,versions,updated_at:new Date().toISOString()}).eq('id',edGID);
-  toast(`🚀 v${newVer} として公開しました！`,'s');$('ed-vi').textContent=`公開: v${newVer}`;
+  try{
+    if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+    const ex={};Object.entries(edFiles).forEach(([k,f])=>{if(!['html','css','js'].includes(k))ex[k]=f;});
+    const { data: g } = await sb.from('games').select('*').eq('id',edGID).single();
+    const newVer=(g.current_version||0)+1;
+    const ver={version:newVer,html:edFiles.html?.content,css:edFiles.css?.content,js:edFiles.js?.content,files:ex,title:$('ed-t').value,deployedAt:new Date().toISOString()};
+    const versions=[...(g.versions||[]),ver];
+    await sb.from('games').update({is_published:true,published_version:newVer,current_version:newVer,versions,updated_at:new Date().toISOString()}).eq('id',edGID);
+    toast(`🚀 v${newVer} として公開しました！`,'s');
+    $('ed-vi').textContent=`公開: v${newVer}`;
+  }catch(e){toast('公開エラー: '+e.message,'e');}
+  finally{
+    _deploying=false;
+    if(btn){btn.disabled=false;btn.textContent='🚀 公開する';}
+  }
 }
 function toggleVH(){const v=$('vlist');v.style.display=v.style.display==='none'?'':'none';}
 function renderVH(vers){const vl=$('vlist');vl.innerHTML='';if(!vers.length){vl.innerHTML='<div style="font-size:.7rem;color:var(--tx3)">まだ公開履歴がありません</div>';return;}[...vers].reverse().forEach(v=>{const r=document.createElement('div');r.className='vrow';r.innerHTML=`<span class="vnum">v${v.version}</span><span class="vdate">${fd(v.deployedAt)}</span><button class="vrest" onclick='restoreV(${JSON.stringify(v)})'>復元</button>`;vl.appendChild(r);});}
