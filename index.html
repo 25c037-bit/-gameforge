@@ -1306,10 +1306,55 @@ async function checkGameUrl() {
   const EMOJIS2 = ['👍','❤️','🔥','⭐','😂','😮'];
   const [{ data: counts }] = await Promise.all([sb2.from('reactions').select('emoji').eq('game_id', gid)]);
   const c = {}; EMOJIS2.forEach(e => c[e] = 0); (counts||[]).forEach(r => { if(c[r.emoji]!==undefined) c[r.emoji]++; });
-  document.getElementById('react-bar').innerHTML = EMOJIS2.map(e =>
+  // リアクションバー構築
+  const bar = document.getElementById('react-bar');
+  bar.innerHTML = EMOJIS2.map(e =>
     '<button onclick="doReact2(\'' + gid + '\',\'' + e + '\')" style="background:rgba(255,255,255,0.05);border:1px solid #1e293b;border-radius:20px;padding:3px 10px;color:#fff;cursor:pointer;font-size:12px">' +
     e + ' ' + (c[e]||0) + '<\/button>'
   ).join('') + '<span style="flex:1"><\/span><span style="font-size:11px;color:#666">📝 ' + (g.description||'') + '<\/span>';
+
+  // 通報ボタンを追加（ログイン済みかつ自分のゲームでない場合）
+  const savedSession = localStorage.getItem('ds_session');
+  if(savedSession){
+    try{
+      const sess = JSON.parse(savedSession);
+      if(sess.id && sess.id !== g.author_id){
+        // 通報済みか確認
+        const {data:myRep} = await sb2.from('game_reports').select('id').eq('game_id',gid).eq('reporter_id',sess.id);
+        const alreadyReported = myRep && myRep.length > 0;
+
+        const repBtn = document.createElement('button');
+        repBtn.style.cssText='background:'+(alreadyReported?'rgba(255,255,255,0.05)':'rgba(239,68,68,0.15)')+';border:1px solid '+(alreadyReported?'#333':'#ef4444')+';border-radius:20px;padding:3px 10px;color:'+(alreadyReported?'#666':'#ef4444')+';cursor:pointer;font-size:12px;margin-left:8px;flex-shrink:0';
+        repBtn.textContent = alreadyReported ? '🚩 通報済み' : '🚩 通報';
+        repBtn.disabled = alreadyReported;
+
+        if(!alreadyReported){
+          repBtn.onclick = async () => {
+            const reason = prompt('通報理由を選んでください:\n1. 不適切なコンテンツ\n2. スパム・広告\n3. 著作権侵害\n4. 有害・危険\n5. その他\n\n番号または理由を入力:');
+            if(!reason)return;
+            const types={'1':'不適切なコンテンツ','2':'スパム・広告','3':'著作権侵害','4':'有害・危険なコンテンツ','5':'その他'};
+            const reasonText = types[reason.trim()] || reason;
+            try{
+              await sb2.from('game_reports').upsert({
+                id: sess.id+'_'+gid,
+                game_id: gid,
+                game_version: g.published_version||1,
+                reporter_id: sess.id,
+                reason: reasonText
+              },{onConflict:'game_id,reporter_id'});
+              repBtn.textContent='🚩 通報済み';
+              repBtn.disabled=true;
+              repBtn.style.color='#666';
+              repBtn.style.borderColor='#333';
+              repBtn.style.background='rgba(255,255,255,0.05)';
+              alert('通報しました。管理者が確認します。');
+            }catch(e){ alert('エラー: '+e.message); }
+          };
+        }
+        bar.appendChild(repBtn);
+      }
+    }catch(e){}
+  }
 
   window.doReact2 = async (gid, emoji) => {
     await sb2.from('reactions').insert({ game_id: gid, emoji });
