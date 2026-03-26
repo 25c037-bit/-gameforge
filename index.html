@@ -262,11 +262,25 @@ textarea.inp{resize:vertical;min-height:50px}
 .mtitle{font-family:var(--fh);font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.85rem}
 .ma{display:flex;gap:.42rem;margin-top:.85rem;justify-content:flex-end}
 
+/* ── Custom Dialog ── */
+#ds-dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:300;display:none;align-items:center;justify-content:center}
+#ds-dialog-overlay.on{display:flex}
+#ds-dialog-box{background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:1.4rem;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#ds-dialog-title{font-family:var(--fh);font-size:.82rem;color:var(--accent);margin-bottom:.7rem;font-weight:700}
+#ds-dialog-msg{font-size:.84rem;color:var(--tx2);line-height:1.6;margin-bottom:.9rem;white-space:pre-wrap}
+#ds-dialog-input{width:100%;padding:.6rem .8rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.86rem;outline:none;margin-bottom:.8rem;display:none}
+#ds-dialog-input:focus{border-color:var(--accent)}
+#ds-dialog-select{width:100%;padding:.6rem .8rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.84rem;outline:none;margin-bottom:.8rem;display:none}
+#ds-dialog-textarea{width:100%;padding:.6rem .8rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.84rem;outline:none;margin-bottom:.8rem;resize:vertical;min-height:80px;display:none}
+#ds-dialog-btns{display:flex;gap:.5rem;justify-content:flex-end}
+
 /* ── Toast ── */
 #toasts{position:fixed;bottom:1.3rem;right:1.3rem;z-index:200;display:flex;flex-direction:column;gap:.42rem}
 .toast{padding:.62rem 1rem;border-radius:var(--r);color:#fff;font-size:.8rem;animation:tin .22s ease;max-width:290px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
 .ts{background:var(--green)}.te{background:var(--red)}.ti{background:var(--a2)}
 @keyframes tin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes slideUp{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-20px)}}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bd2);border-top-color:var(--accent);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
 .lang-opt{background:var(--bg4);border:2px solid var(--bd2);border-radius:var(--r);padding:.8rem;cursor:pointer;transition:.2s;text-align:center;color:var(--tx2);font-family:var(--fb)}
 .lang-opt:hover{border-color:var(--accent);color:var(--tx)}
@@ -577,6 +591,16 @@ textarea.inp{resize:vertical;min-height:50px}
   <div class="ma"><button class="bs bg" onclick="closeM('m-switch')">閉じる</button><button class="bs ba" onclick="switchLogin()">このアカウントで切り替え</button></div>
 </div></div>
 
+<div id="ds-dialog-overlay">
+  <div id="ds-dialog-box">
+    <div id="ds-dialog-title"></div>
+    <div id="ds-dialog-msg"></div>
+    <input id="ds-dialog-input" type="text" autocomplete="off">
+    <select id="ds-dialog-select"></select>
+    <textarea id="ds-dialog-textarea"></textarea>
+    <div id="ds-dialog-btns"></div>
+  </div>
+</div>
 <div id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
@@ -617,6 +641,64 @@ const dbounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTim
 const dbTL = dbounce(v => { tlQ=v; tlOff=0; $('tl-grid').innerHTML=''; loadTL(); }, 350);
 const dbVid = dbounce(v => { vidQ=v; vidOff=0; $('vg').innerHTML=''; loadVids(); }, 350);
 function toast(msg, type='i') { const el=document.createElement('div'); el.className=`toast t${type}`; el.textContent=msg; $('toasts').appendChild(el); setTimeout(()=>el.remove(),3200); }
+
+// ════════════════════════════════════════════
+//  CUSTOM DIALOG (alert/confirm/prompt 代替)
+// ════════════════════════════════════════════
+let _dialogResolve=null;
+function _showDialog(title,msg,type='alert',opts={}){
+  return new Promise(resolve=>{
+    _dialogResolve=resolve;
+    $('ds-dialog-title').textContent=title;
+    $('ds-dialog-msg').textContent=msg;
+    $('ds-dialog-input').style.display='none';
+    $('ds-dialog-select').style.display='none';
+    $('ds-dialog-textarea').style.display='none';
+    $('ds-dialog-input').value='';
+    $('ds-dialog-textarea').value='';
+    const btns=$('ds-dialog-btns');btns.innerHTML='';
+
+    if(type==='prompt'){
+      $('ds-dialog-input').style.display='';
+      $('ds-dialog-input').placeholder=opts.placeholder||'';
+      $('ds-dialog-input').value=opts.default||'';
+      setTimeout(()=>$('ds-dialog-input').focus(),50);
+      $('ds-dialog-input').onkeydown=e=>{if(e.key==='Enter')_closeDialog($('ds-dialog-input').value);};
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog($('ds-dialog-input').value);btns.appendChild(bOk);
+      const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
+    } else if(type==='textarea'){
+      $('ds-dialog-textarea').style.display='';
+      $('ds-dialog-textarea').placeholder=opts.placeholder||'';
+      setTimeout(()=>$('ds-dialog-textarea').focus(),50);
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog($('ds-dialog-textarea').value.trim());btns.appendChild(bOk);
+      const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
+    } else if(type==='select'){
+      const sel=$('ds-dialog-select');sel.style.display='';sel.innerHTML='';
+      (opts.options||[]).forEach(o=>{const op=document.createElement('option');op.value=o.value;op.textContent=o.label;sel.appendChild(op);});
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog(sel.value);btns.appendChild(bOk);
+      const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
+    } else if(type==='confirm'){
+      const bOk=document.createElement('button');bOk.className='bs '+(opts.danger?'bd2':'ba');bOk.textContent=opts.okLabel||'OK';bOk.onclick=()=>_closeDialog(true);btns.appendChild(bOk);
+      const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(false);btns.appendChild(bCa);
+    } else {
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog(true);btns.appendChild(bOk);
+    }
+    $('ds-dialog-overlay').classList.add('on');
+  });
+}
+function _closeDialog(val){
+  $('ds-dialog-overlay').classList.remove('on');
+  if(_dialogResolve){_dialogResolve(val);_dialogResolve=null;}
+}
+// ESCで閉じる
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('ds-dialog-overlay').classList.contains('on'))_closeDialog(null);});
+
+// 使いやすいラッパー
+const dsAlert=(msg,title='お知らせ')=>_showDialog(title,msg,'alert');
+const dsConfirm=(msg,title='確認',opts={})=>_showDialog(title,msg,'confirm',opts);
+const dsPrompt=(msg,title='入力',opts={})=>_showDialog(title,msg,'prompt',opts);
+const dsTextarea=(msg,title='入力',opts={})=>_showDialog(title,msg,'textarea',opts);
+const dsSelect=(msg,title='選択',opts={})=>_showDialog(title,msg,'select',opts);
 function openM(id) { $(id).classList.add('on'); if(id==='m-switch')renderSwitchModal(); }
 function closeM(id) { $(id).classList.remove('on'); }
 document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');}));
@@ -1164,8 +1246,8 @@ function switchTab(id){
   editors[id].setValue(f.content||'');editors[id].on('change',()=>{schedSave();checkErrors();});
   setTimeout(()=>{editors[id].refresh();checkErrors();},80);
 }
-function addTab(){const name=prompt('ファイル名（例: game2.html）');if(!name)return;const ext=name.split('.').pop().toLowerCase();const modes={html:'htmlmixed',css:'css',js:'javascript'};const id='f_'+uid();edFiles[id]={name,mode:modes[ext]||'htmlmixed',content:''};renderTabs();switchTab(id);}
-function rmTab(e,id){e.stopPropagation();if(!confirm(`"${edFiles[id].name}" を削除しますか？`))return;delete edFiles[id];if(editors[id]){editors[id].toTextArea();delete editors[id];}if(activeTab===id){activeTab=null;switchTab(Object.keys(edFiles)[0]);}renderTabs();schedSave();}
+async function addTab(){const name=await dsPrompt('ファイル名を入力してください','ファイル追加',{placeholder:'例: game2.html'});if(!name)return;const ext=name.split('.').pop().toLowerCase();const modes={html:'htmlmixed',css:'css',js:'javascript'};const id='f_'+uid();edFiles[id]={name,mode:modes[ext]||'htmlmixed',content:''};renderTabs();switchTab(id);}
+async function rmTab(e,id){e.stopPropagation();if(!await dsConfirm(`「${edFiles[id].name}」を削除しますか？`,'ファイル削除',{danger:true,okLabel:'削除'}))return;delete edFiles[id];if(editors[id]){editors[id].toTextArea();delete editors[id];}if(activeTab===id){activeTab=null;switchTab(Object.keys(edFiles)[0]);}renderTabs();schedSave();}
 function checkErrors(){
   const ov=$('erov'),el=$('erl');const errs=[];
   if(activeTab&&editors[activeTab]){
@@ -1240,7 +1322,7 @@ async function confirmDeploy(){
 }
 function toggleVH(){const v=$('vlist');v.style.display=v.style.display==='none'?'':'none';}
 function renderVH(vers){const vl=$('vlist');vl.innerHTML='';if(!vers.length){vl.innerHTML='<div style="font-size:.7rem;color:var(--tx3)">まだ公開履歴がありません</div>';return;}[...vers].reverse().forEach(v=>{const r=document.createElement('div');r.className='vrow';r.innerHTML=`<span class="vnum">v${v.version}</span><span class="vdate">${fd(v.deployedAt)}</span><button class="vrest" onclick='restoreV(${JSON.stringify(v)})'>復元</button>`;vl.appendChild(r);});}
-function restoreV(v){if(!confirm(`v${v.version} を復元しますか？`))return;edFiles.html={...edFiles.html,content:v.html};edFiles.css={...edFiles.css,content:v.css};edFiles.js={...edFiles.js,content:v.js};if(v.files)Object.entries(v.files).forEach(([k,f])=>edFiles[k]=f);switchTab(activeTab);toast(`v${v.version} を復元しました`,'s');schedSave();}
+async function restoreV(v){if(!await dsConfirm(`v${v.version} を復元しますか？現在の内容は上書きされます。`,'バージョン復元',{okLabel:'復元'}))return;edFiles.html={...edFiles.html,content:v.html};edFiles.css={...edFiles.css,content:v.css};edFiles.js={...edFiles.js,content:v.js};if(v.files)Object.entries(v.files).forEach(([k,f])=>edFiles[k]=f);switchTab(activeTab);toast(`v${v.version} を復元しました`,'s');schedSave();}
 
 // ════════════════════════════════════════════
 //  PLAY
@@ -1331,10 +1413,15 @@ async function checkGameUrl() {
 
         if(!alreadyReported){
           repBtn.onclick = async () => {
-            const reason = prompt('通報理由:\n1. 不適切なコンテンツ\n2. スパム・広告\n3. 著作権侵害\n4. 有害・危険\n5. その他\n\n番号または理由を入力:');
-            if(!reason)return;
-            const types={'1':'不適切なコンテンツ','2':'スパム・広告','3':'著作権侵害','4':'有害・危険なコンテンツ','5':'その他'};
-            const reasonText = types[reason.trim()] || reason;
+            const reasonVal=await dsSelect('通報理由を選んでください','🚩 ゲームを通報',{options:[
+              {value:'不適切なコンテンツ',label:'🔞 不適切なコンテンツ'},
+              {value:'スパム・広告',label:'📢 スパム・広告'},
+              {value:'著作権侵害',label:'⚠️ 著作権侵害'},
+              {value:'有害・危険なコンテンツ',label:'☣️ 有害・危険なコンテンツ'},
+              {value:'その他',label:'📝 その他'}
+            ]});
+            if(!reasonVal)return;
+            const reasonText=reasonVal;
             try{
               await sb2.from('game_reports').upsert({
                 id: sess.id+'_'+gid,
@@ -1349,8 +1436,8 @@ async function checkGameUrl() {
               repBtn.style.borderColor='#444';
               repBtn.style.background='#1a1a1a';
               repBtn.style.cursor='default';
-              alert('通報しました。管理者が確認します。');
-            }catch(e){ alert('エラー: '+e.message); }
+              await dsAlert('通報しました。管理者が確認します。','通報完了');
+            }catch(e){ await dsAlert('エラー: '+e.message,'エラー'); }
           };
         }
         document.body.appendChild(repBtn);
@@ -1405,7 +1492,7 @@ async function doFollow(uid2, btn){
   else{ await sb.from('follows').insert({follower_id:ME.id,following_id:uid2}); toast('フォローしました','s'); if(btn){btn.textContent='フォロー中';btn.className='bs bg';} }
 }
 async function doBlock(uid2){
-  if(!confirm('ブロックしますか？'))return;
+  if(!await dsConfirm('このユーザーをブロックしますか？','ブロック確認',{danger:true,okLabel:'ブロック'}))return;
   const { data: ex } = await sb.from('blocks').select('blocker_id').eq('blocker_id',ME.id).eq('blocked_id',uid2).single();
   if(ex){ await sb.from('blocks').delete().eq('blocker_id',ME.id).eq('blocked_id',uid2); toast('ブロックを解除しました','i'); }
   else{ await sb.from('blocks').insert({blocker_id:ME.id,blocked_id:uid2}); await sb.from('follows').delete().eq('follower_id',ME.id).eq('following_id',uid2); toast('ブロックしました','i'); }
@@ -1725,7 +1812,7 @@ function renderAdmGames(games,container){
 }
 async function admSearch(){const q=$('adm-sq').value.trim();const { data } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,display_name.ilike.%${q}%`);const el=$('adm-sr');if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.82rem">見つかりませんでした</p>';return;}el.innerHTML=`<table class="atbl"><thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>状態</th><th>操作</th></tr></thead><tbody>${data.map(u=>`<tr><td>${u.avatar||'🎮'}</td><td>${esc(u.username)}</td><td>${esc(u.display_name)}</td><td>${u.banned!=='none'&&u.banned?'<span class="bdg bg-r">停止中</span>':'<span class="bdg bg-g">正常</span>'}</td><td><div style="display:flex;gap:.3rem"><button class="bs bg" style="font-size:.7rem" onclick="openWarnModal('${u.id}')">⚠ 警告</button></div></td></tr>`).join('')}</tbody></table>`;}
 async function admSrc(gid){const { data: g } = await sb.from('games').select('html,css,js,title').eq('id',gid).single();if(!g)return;$('src-c').innerHTML=`<div style="margin-bottom:.35rem"><span class="bdg bg-g">HTML</span></div><div class="srcv"><pre>${esc(g.html)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-y">CSS</span></div><div class="srcv"><pre>${esc(g.css)}</pre></div><div style="margin:.55rem 0 .25rem"><span class="bdg bg-x">JS</span></div><div class="srcv"><pre>${esc(g.js)}</pre></div>`;openM('m-source');}
-async function admFlag(gid){const r=prompt('通報理由:');if(r===null)return;await sb.from('games').update({flagged:true,flag_reason:r,is_published:false}).eq('id',gid);toast('通報しました','s');loadAdmin();}
+async function admFlag(gid){const r=await dsPrompt('非表示にする理由を入力してください','ゲームを非表示');if(r===null)return;await sb.from('games').update({flagged:true,flag_reason:r,is_published:false}).eq('id',gid);toast('通報しました','s');loadAdmin();}
 async function admUnflag(gid){await sb.from('games').update({flagged:false,flag_reason:''}).eq('id',gid);toast('解除しました','s');loadAdmin();}
 // ════════════════════════════════════════════
 //  REPORT SYSTEM
@@ -1906,12 +1993,13 @@ async function loadAdmReports(){
 }
 
 async function admDeleteGame(gid, title, authorName){
-  const feedback=prompt(`「${title}」を削除します。
-作者(${authorName})への削除理由・フィードバック:`);
-  if(feedback===null)return;
-  const days=parseInt(prompt('異議申し立ての猶予日数（例: 7）:'));
+  const feedback=await dsTextarea(`「${title}」を削除します
+作者(${authorName})への削除理由・フィードバックを入力してください`,'ゲーム削除',{placeholder:'例: 規約違反のため削除します'});
+  if(!feedback)return;
+  const daysStr=await dsPrompt('異議申し立ての猶予日数','猶予日数設定',{placeholder:'例: 7'});
+  const days=parseInt(daysStr);
   if(!days||days<1)return;
-  const deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
+  const deadline=new Date(Date.now()+days*24*3600*10 deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
 
   await sb.from('games').update({
     is_published:false,
@@ -2015,9 +2103,10 @@ async function loadAdmAppeals(){
         // 承認（ゲーム返却）
         const bApp=document.createElement('button');bApp.className='bs bgn';bApp.style.fontSize='.72rem';bApp.textContent='✅ 承認・ゲーム返却';
         bApp.onclick=async()=>{
-          const feedback=prompt('作者へのフィードバック（修正してほしい点など）:');
-          if(feedback===null)return;
-          const days=parseInt(prompt('修正猶予日数（例: 7）:'));
+          const feedback=await dsTextarea('作者へのフィードバック（修正してほしい点など）を入力してください','承認・ゲーム返却',{placeholder:'例: ○○の部分を修正してください'});
+          if(!feedback)return;
+          const daysStr=await dsPrompt('修正猶予日数','猶予日数設定',{placeholder:'例: 7'});
+          const days=parseInt(daysStr);
           if(!days||days<1)return;
           const deadline2=new Date(Date.now()+days*24*3600*1000).toISOString();
           await Promise.all([
@@ -2031,7 +2120,7 @@ async function loadAdmAppeals(){
         // 却下（永久BAN）
         const bRej=document.createElement('button');bRej.className='bs bd2';bRej.style.fontSize='.72rem';bRej.textContent='❌ 却下・永久BAN';
         bRej.onclick=async()=>{
-          if(!confirm('却下して永久BANしますか？この操作は取り消せません。'))return;
+          if(!await dsConfirm('却下して永久BANしますか？この操作は取り消せません。','異議却下・永久BAN',{danger:true,okLabel:'却下・永久BAN'}))return;
           await Promise.all([
             sb.from('game_appeals').update({status:'rejected'}).eq('id',ap.id),
             sb.from('games').update({banned_permanently:true,is_published:false,flagged:true}).eq('id',ap.game_id)
@@ -2047,11 +2136,11 @@ async function loadAdmAppeals(){
   }catch(e){c.innerHTML='<p style="color:var(--red);font-size:.82rem">エラー: '+e.message+'</p>';}
 }
 
-async function admFlagV(vid){if(!confirm('非表示にしますか？'))return;await sb.from('videos').update({flagged:true}).eq('id',vid);toast('非表示にしました','s');loadAdmin();}
+async function admFlagV(vid){if(!await dsConfirm('この動画を非表示にしますか？','動画を非表示',{danger:true,okLabel:'非表示'}))return;await sb.from('videos').update({flagged:true}).eq('id',vid);toast('非表示にしました','s');loadAdmin();}
 async function adminGameAct(gid){
   const { data: g } = await sb.from('games').select('*').eq('id',gid).single();
   if(!g)return;
-  if(confirm(`「${g.title}」の管理\n\n[OK] コードを確認\n[キャンセル] 閉じる`)){
+  if(await dsConfirm(`「${g.title}」のソースコードを確認しますか？`,'ゲーム管理',{okLabel:'コード確認'})){
     admSrc(gid);
   }
 }
@@ -2071,7 +2160,7 @@ function openWarnModal(uid2){
 async function issueWarn(uid2,card){
   const reason=$('w-reason').value.trim();
   const msgs={yellow:'🟡 イエローカードを発行します',red:'🔴 3日間停止します',blue:'🔵 永久停止します',green:'🟢 アカウントと全作品を削除します（取り消し不可）'};
-  if(!confirm(`${msgs[card]}\n理由: ${reason||'理由なし'}`))return;
+  if(!await dsConfirm(`${msgs[card]}\n\n理由: ${reason||'理由なし'}`,`警告カード発行`,{danger:true,okLabel:'発行する'}))return;
   closeM('m-warn');
   try {
     if(card==='yellow'){
@@ -2095,9 +2184,9 @@ async function issueWarn(uid2,card){
   } catch(e) { toast('エラー: '+e.message,'e'); }
   loadAdmin();
 }
-async function revokeWarn(uid2){if(!confirm('停止を解除しますか？'))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
-async function grantAdmin(uid2){if(!confirm('このユーザーに管理者権限を付与しますか？'))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
-async function revokeAdmin(uid2){if(!confirm('管理者権限を解除しますか？'))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
+async function revokeWarn(uid2){if(!await dsConfirm('このユーザーの停止を解除しますか？','停止解除',{okLabel:'解除'}))return;await sb.from('profiles').update({banned:'none',ban_until:null}).eq('id',uid2);toast('停止を解除しました','s');loadAdmin();}
+async function grantAdmin(uid2){if(!await dsConfirm('このユーザーに管理者権限を付与しますか？','管理者権限付与',{okLabel:'付与'}))return;await sb.from('profiles').update({role:'admin'}).eq('id',uid2);toast('管理者権限を付与しました','s');loadAdmin();}
+async function revokeAdmin(uid2){if(!await dsConfirm('管理者権限を解除しますか？','管理者権限解除',{danger:true,okLabel:'解除'}))return;await sb.from('profiles').update({role:'user'}).eq('id',uid2);toast('管理者権限を解除しました','s');loadAdmin();}
 
 // ════════════════════════════════════════════
 //  MAINTENANCE
@@ -2196,8 +2285,25 @@ async function unsuspendGame(gid){
 }
 
 async function loadAdmNotices(){const el=$('nt-list');if(!el)return;el.innerHTML='<div class="spin"></div>';const { data } = await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);el.innerHTML='';if(!data?.length){el.innerHTML='<p style="color:var(--tx3);font-size:.8rem">お知らせはありません</p>';return;}data.forEach(n=>{const d=document.createElement('div');d.className='ncard';d.innerHTML=`<div class="ntitle">${esc(n.title)}<button class="bs bd2" onclick="delNotice('${n.id}')" style="font-size:.68rem;padding:.15rem .42rem;margin-left:auto">削除</button></div><div class="nbody">${esc(n.body)}</div><div class="nmeta">${fd(n.created_at)}</div>`;el.appendChild(d);});}
-async function postNotice(){const t=$('nt-t').value.trim(),b=$('nt-b').value.trim(),tp=$('nt-tp').value;if(!t||!b){toast('タイトルと本文を入力してください','e');return;}await sb.from('notices').insert({title:t,body:b,type:tp,author_id:ME.id});toast('お知らせを投稿しました！','s');$('nt-t').value='';$('nt-b').value='';loadAdmNotices();}
-async function delNotice(id){if(!confirm('削除しますか？'))return;await sb.from('notices').delete().eq('id',id);toast('削除しました','s');loadAdmNotices();}
+async function postNotice(){
+  const t=$('nt-t').value.trim(),b=$('nt-b').value.trim(),tp=$('nt-tp').value;
+  if(!t||!b){toast('タイトルと本文を入力してください','e');return;}
+  await sb.from('notices').insert({title:t,body:b,type:tp,author_id:ME.id});
+  toast('お知らせを投稿しました！','s');
+  $('nt-t').value='';$('nt-b').value='';
+  loadAdmNotices();
+  // 全ユーザーに通知トースト表示
+  const icon=tp==='danger'?'🚨':tp==='warn'?'⚠️':'📢';
+  showNoticeToast(icon+' '+t, b, tp);
+}
+function showNoticeToast(title, body, type){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:250;background:var(--bg3);border:1px solid '+(type==='danger'?'var(--red)':type==='warn'?'var(--a3)':'var(--accent)')+';border-radius:var(--r2);padding:.9rem 1.2rem;max-width:380px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.5);animation:slideDown .3s ease';
+  el.innerHTML='<div style="font-weight:700;font-size:.88rem;margin-bottom:.3rem;color:'+(type==='danger'?'var(--red)':type==='warn'?'var(--a3)':'var(--accent)')+'">'+title+'</div><div style="font-size:.78rem;color:var(--tx2)">'+body.slice(0,80)+(body.length>80?'...':'')+'</div>';
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.animation='slideUp .3s ease forwards';setTimeout(()=>el.remove(),300);},5000);
+}
+async function delNotice(id){if(!await dsConfirm('このお知らせを削除しますか？','お知らせ削除',{danger:true,okLabel:'削除'}))return;await sb.from('notices').delete().eq('id',id);toast('削除しました','s');loadAdmNotices();}
 </script>
 </body>
 </html>
