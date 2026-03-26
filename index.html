@@ -1691,11 +1691,22 @@ async function loadReportArea(gid, g){
   area.innerHTML='';
   if(!ME||ME.id===g.author_id)return;
 
-  // 既に通報済みか確認
-  const {data:myRep}=await sb.from('game_reports').select('id').eq('game_id',gid).eq('reporter_id',ME.id).maybeSingle().catch(()=>({data:null}));
-  // 通報数
-  const {count:repCount}=await sb.from('game_reports').select('*',{count:'exact',head:true}).eq('game_id',gid).catch(()=>({count:0}));
+  let myRep=false, repCount=0;
+  try{
+    const {data}=await sb.from('game_reports').select('id').eq('game_id',gid).eq('reporter_id',ME.id);
+    myRep=!!(data&&data.length>0);
+  }catch(e){}
+  try{
+    const {data}=await sb.from('game_reports').select('id').eq('game_id',gid);
+    repCount=(data||[]).length;
+  }catch(e){}
 
+  if(repCount>0){
+    const cnt=document.createElement('span');
+    cnt.style.cssText='font-size:.7rem;color:var(--tx3)';
+    cnt.textContent=repCount+'件の通報';
+    area.appendChild(cnt);
+  }
   const btn=document.createElement('button');
   btn.className='bs '+(myRep?'bg':'bd2');
   btn.style.fontSize='.72rem';
@@ -1708,12 +1719,6 @@ async function loadReportArea(gid, g){
     btn.onclick=()=>openReportModal(gid);
   }
   area.appendChild(btn);
-  if(repCount>0){
-    const cnt=document.createElement('span');
-    cnt.style.cssText='font-size:.7rem;color:var(--tx3)';
-    cnt.textContent=repCount+'件の通報';
-    area.insertBefore(cnt,btn);
-  }
 }
 
 function openReportModal(gid){
