@@ -383,6 +383,29 @@ textarea.inp{resize:vertical;min-height:50px}
       <div class="ph"><span class="pt">マイゲーム</span><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
       <div class="pb" id="mg-b"></div>
     </div>
+    <!-- AI ASSISTANT -->
+    <div id="p-ai-assist" class="pg">
+      <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+        <div class="ph" style="flex-shrink:0">
+          <button class="bs bg" onclick="go('editor')">← エディターに戻る</button>
+          <span class="pt" style="margin-left:.5rem">🤖 AIゲームアシスタント</span>
+          <span style="font-size:.72rem;color:var(--tx3);margin-left:.5rem" id="ai-game-title"></span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:1rem 1.3rem;display:flex;flex-direction:column;gap:.8rem" id="ai-chat-msgs">
+          <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:.9rem 1rem;font-size:.84rem;color:var(--tx2);line-height:1.7">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:.4rem">🤖 D·STUDIO AIアシスタント</div>
+            作りたいゲームについて何でも聞いてください！<br>
+            「〇〇な機能を追加して」「バグを直して」「もっとかっこよくして」など、自由に話しかけてください。<br>
+            コードを生成したら確認してから反映できます。
+          </div>
+        </div>
+        <div style="padding:.7rem 1rem;border-top:1px solid var(--bd);display:flex;gap:.5rem;flex-shrink:0;background:var(--bg2)">
+          <textarea id="ai-chat-input" placeholder="例: ジャンプ機能を追加して / スコアを表示して / 背景を青くして..." style="flex:1;padding:.6rem .8rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.82rem;outline:none;resize:none;height:60px;line-height:1.5" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMsg();}"></textarea>
+          <button class="bs ba" onclick="sendAIMsg()" style="align-self:flex-end;padding:.6rem 1rem">送信</button>
+        </div>
+      </div>
+    </div>
+
     <!-- EDITOR -->
     <div id="p-editor" class="pg">
       <div class="edl">
@@ -390,6 +413,7 @@ textarea.inp{resize:vertical;min-height:50px}
           <input class="edti" type="text" id="ed-t" placeholder="ゲームタイトル..." oninput="schedSave()">
           <span class="sst s" id="sst">● 保存済</span>
           <button class="bs bg" onclick="refreshPV()" title="更新">⟳</button>
+          <button class="bs bg" onclick="openAIAssist()" style="border-color:var(--a2);color:var(--a2)" title="AIアシスタント">🤖 AI</button>
           <button class="bs ba" onclick="handleDeploy()">🚀 公開</button>
         </div>
         <div class="tbar" id="ed-tabs"></div>
@@ -1258,19 +1282,18 @@ ${useDb?'リアルタイムDBを使う場合はJSコード内でGF.set(key,value
 - 日本語でコメントを書く
 - スマホでも遊べるようにする`;
 
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    // Supabase Edge Function経由でAnthropicAPIを呼び出す
+    const res=await fetch(SUPA_URL+'/functions/v1/ai-game-gen',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:4000,
-        system:systemPrompt,
-        messages:[{role:'user',content:prompt}]
-      })
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+SUPA_KEY
+      },
+      body:JSON.stringify({prompt,useDb,systemPrompt})
     });
 
     const data=await res.json();
-    if(!res.ok){errEl.textContent='APIエラー: '+(data.error?.message||res.status);return;}
+    if(!res.ok||data.error){errEl.textContent='APIエラー: '+(data.error?.message||data.error||res.status);return;}
 
     const text=data.content?.find(c=>c.type==='text')?.text||'';
     // JSONを抽出
@@ -1540,6 +1563,155 @@ async function confirmDeploy(){
 function toggleVH(){const v=$('vlist');v.style.display=v.style.display==='none'?'':'none';}
 function renderVH(vers){const vl=$('vlist');vl.innerHTML='';if(!vers.length){vl.innerHTML='<div style="font-size:.7rem;color:var(--tx3)">まだ公開履歴がありません</div>';return;}[...vers].reverse().forEach(v=>{const r=document.createElement('div');r.className='vrow';r.innerHTML=`<span class="vnum">v${v.version}</span><span class="vdate">${fd(v.deployedAt)}</span><button class="vrest" onclick='restoreV(${JSON.stringify(v)})'>復元</button>`;vl.appendChild(r);});}
 async function restoreV(v){if(!await dsConfirm(`v${v.version} を復元しますか？現在の内容は上書きされます。`,'バージョン復元',{okLabel:'復元'}))return;edFiles.html={...edFiles.html,content:v.html};edFiles.css={...edFiles.css,content:v.css};edFiles.js={...edFiles.js,content:v.js};if(v.files)Object.entries(v.files).forEach(([k,f])=>edFiles[k]=f);switchTab(activeTab);toast(`v${v.version} を復元しました`,'s');schedSave();}
+
+// ════════════════════════════════════════════
+//  AI ASSISTANT
+// ════════════════════════════════════════════
+let aiChatHistory=[];
+
+function openAIAssist(){
+  if(!edGID){toast('エディターを開いてからAIを使ってください','e');return;}
+  // 現在のコードを保存してからAI画面へ
+  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
+  $('ai-game-title').textContent=($('ed-t').value||'無題のゲーム');
+  aiChatHistory=[];
+  $('ai-chat-msgs').innerHTML=`
+    <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:.9rem 1rem;font-size:.84rem;color:var(--tx2);line-height:1.7">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:.4rem">🤖 D·STUDIO AIアシスタント</div>
+      作りたいゲームについて何でも聞いてください！<br>
+      「〇〇な機能を追加して」「バグを直して」「もっとかっこよくして」など、自由に話しかけてください。<br>
+      コードを生成したら確認してから反映できます。
+    </div>`;
+  go('ai-assist');
+}
+
+function addAIMsg(role, content, hasCode=false, codeData=null){
+  const msgs=$('ai-chat-msgs');
+  const div=document.createElement('div');
+  const isAI=role==='assistant';
+  div.style.cssText='display:flex;gap:.6rem;align-items:flex-start;'+(isAI?'':'flex-direction:row-reverse');
+
+  const avatar=document.createElement('div');
+  avatar.style.cssText='width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;background:'+(isAI?'var(--a2)':'var(--bg4)');
+  avatar.textContent=isAI?'🤖':(ME?.avatar||'🎮');
+
+  const bubble=document.createElement('div');
+  bubble.style.cssText='max-width:80%;padding:.65rem .9rem;border-radius:12px;font-size:.82rem;line-height:1.65;'
+    +(isAI?'background:var(--bg3);border:1px solid var(--bd2);':'background:var(--a2);color:#fff;');
+  bubble.textContent=content;
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+
+  // コードがある場合は反映ボタンを追加
+  if(hasCode&&codeData){
+    const applyDiv=document.createElement('div');
+    applyDiv.style.cssText='margin-left:34px;margin-top:-.4rem;margin-bottom:.4rem';
+    const applyBtn=document.createElement('button');
+    applyBtn.className='bs ba';
+    applyBtn.style.fontSize='.75rem';
+    applyBtn.textContent='✅ このコードをエディターに反映する';
+    applyBtn.onclick=()=>applyAICode(codeData, applyBtn);
+    applyDiv.appendChild(applyBtn);
+    msgs.appendChild(applyDiv);
+  }
+
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function applyAICode(codeData, btn){
+  btn.disabled=true;
+  btn.textContent='✅ 反映済み';
+  btn.style.background='var(--green)';
+
+  // エディターにコードを反映
+  if(codeData.html!==undefined&&edFiles.html){edFiles.html.content=codeData.html;if(editors.html)editors.html.setValue(codeData.html);}
+  if(codeData.css!==undefined&&edFiles.css){edFiles.css.content=codeData.css;if(editors.css)editors.css.setValue(codeData.css);}
+  if(codeData.js!==undefined&&edFiles.js){edFiles.js.content=codeData.js;if(editors.js)editors.js.setValue(codeData.js);}
+  if(codeData.title){$('ed-t').value=codeData.title;}
+
+  // 自動保存してプレビュー更新
+  schedSave();
+  toast('✅ コードを反映しました！','s');
+}
+
+async function sendAIMsg(){
+  const inp=$('ai-chat-input');
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value='';
+
+  addAIMsg('user',msg);
+
+  // 現在のコードを取得
+  const currentCode={
+    html:edFiles.html?.content||'',
+    css:edFiles.css?.content||'',
+    js:edFiles.js?.content||''
+  };
+
+  // ローディング表示
+  const msgs=$('ai-chat-msgs');
+  const loading=document.createElement('div');
+  loading.style.cssText='display:flex;gap:.6rem;align-items:center;padding:.5rem 0';
+  loading.innerHTML='<div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;background:var(--a2);flex-shrink:0">🤖</div>'
+    +'<div style="font-size:.8rem;color:var(--tx3)"><span class="spin"></span> AIが考えています...</div>';
+  msgs.appendChild(loading);
+  msgs.scrollTop=msgs.scrollHeight;
+
+  // チャット履歴に追加
+  aiChatHistory.push({role:'user',content:msg});
+
+  try{
+    const systemPrompt='D-STUDIOゲーム開発AIです。'
+      +'現在のコード HTML:'+currentCode.html+' CSS:'+currentCode.css+' JS:'+currentCode.js
+      +' コードを変更する場合はJSON: ```json {"html":"...","css":"...","js":"..."} ``` で返してください。'
+      +' 変更しない質問は日本語で簡潔に回答してください。';
+
+        const res=await fetch(SUPA_URL+'/functions/v1/ai-game-gen',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body:JSON.stringify({
+        prompt:msg,
+        systemPrompt,
+        history:aiChatHistory.slice(-10), // 直近10件
+        useDb:false
+      })
+    });
+
+    loading.remove();
+
+    const data=await res.json();
+    if(!res.ok||data.error){
+      addAIMsg('assistant','エラーが発生しました: '+(data.error?.message||data.error||res.status));
+      aiChatHistory.pop();
+      return;
+    }
+
+    const text=data.content?.find(c=>c.type==='text')?.text||'';
+
+    // コードブロックを抽出
+    const jsonMatch=text.match(/```json\s*([\s\S]*?)\s*```/);
+    let codeData=null;
+    let displayText=text.replace(/```json[\s\S]*?```/g,'').trim();
+
+    if(jsonMatch){
+      try{
+        codeData=JSON.parse(jsonMatch[1]);
+        if(!displayText)displayText='コードを生成しました！内容を確認して反映してください。';
+      }catch(e){}
+    }
+
+    aiChatHistory.push({role:'assistant',content:text});
+    addAIMsg('assistant', displayText||text, !!codeData, codeData);
+
+  }catch(e){
+    loading.remove();
+    addAIMsg('assistant','エラー: '+e.message);
+    aiChatHistory.pop();
+  }
+}
 
 // ════════════════════════════════════════════
 //  PLAY
