@@ -1102,11 +1102,18 @@ async function loadMG(){
       +'<span style="font-size:.7rem;color:var(--tx3)">'+fd(g.updated_at)+'</span>';
     row.appendChild(top);
 
-    // 非表示理由・フィードバック表示
-    if(g.flagged&&(g.hidden_reason||g.flag_reason)){
+    // 非表示理由・フィードバック表示（hidden_reason or flag_reason）
+    const displayReason=g.hidden_reason||g.flag_reason||'';
+    if(g.flagged&&displayReason){
       const reason=document.createElement('div');
-      reason.style.cssText='width:100%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:.5rem .7rem;font-size:.76rem;color:var(--tx2)';
-      reason.innerHTML='<span style="color:var(--red);font-weight:700">非表示理由:</span> '+esc(g.hidden_reason||g.flag_reason);
+      reason.style.cssText='width:100%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:.5rem .7rem;font-size:.76rem;color:var(--tx2);margin-top:.3rem';
+      reason.innerHTML='<span style="color:var(--red);font-weight:700">📋 非表示理由:</span> '+esc(displayReason);
+      row.appendChild(reason);
+    } else if(g.flagged){
+      // 理由が入っていない場合でも表示
+      const reason=document.createElement('div');
+      reason.style.cssText='width:100%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:.5rem .7rem;font-size:.76rem;color:var(--tx3);margin-top:.3rem';
+      reason.textContent='管理者により非表示にされました';
       row.appendChild(reason);
     }
 
@@ -1148,19 +1155,18 @@ async function loadMG(){
       }
 
       // 異議申し立て（非表示中・edit_unlocked=false・残り回数あり）
-      // ※ appeal_deadline は承認後に設定されるので、非表示直後はnull
       if(g.flagged&&!g.edit_unlocked&&!g.banned_permanently&&remainAppeals>0){
-        const pendingAppeal=appeal&&appeal.status==='pending';
+        const pendingAppeal=appeal&&(appeal.status==='pending');
         if(!pendingAppeal){
           const bAp=document.createElement('button');bAp.className='bs bg';
           bAp.style.cssText='border-color:var(--a2);color:var(--a2);font-size:.72rem';
           bAp.textContent='📝 異議申立 (残'+remainAppeals+'回)';
           bAp.onclick=()=>openAppealModal(g.id,g.title,appealCount);
-          btns.appendChild(bAp);
+          btns.appendChild(bAp);  // btns に追加（row.appendChild は後でまとめて）
         } else {
           const pend=document.createElement('span');
-          pend.style.cssText='font-size:.72rem;color:var(--a3)';
-          pend.textContent='⏳ 審査中...';
+          pend.style.cssText='font-size:.72rem;color:var(--a3);padding:.3rem 0;display:block';
+          pend.textContent='⏳ 審査中... 管理者の返答をお待ちください';
           btns.appendChild(pend);
         }
       }
