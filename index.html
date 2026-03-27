@@ -659,23 +659,28 @@ function _showDialog(title,msg,type='alert',opts={}){
     const btns=$('ds-dialog-btns');btns.innerHTML='';
 
     if(type==='prompt'){
-      $('ds-dialog-input').style.display='';
-      $('ds-dialog-input').placeholder=opts.placeholder||'';
-      $('ds-dialog-input').value=opts.default||'';
-      setTimeout(()=>$('ds-dialog-input').focus(),50);
-      $('ds-dialog-input').onkeydown=e=>{if(e.key==='Enter')_closeDialog($('ds-dialog-input').value);};
+      const inp=$('ds-dialog-input');
+      inp.style.display='';
+      inp.placeholder=opts.placeholder||'';
+      inp.value=opts.default||'';
+      setTimeout(()=>{try{inp.focus();}catch(e){}},80);
+      inp.onkeydown=e=>{if(e.key==='Enter')_closeDialog(inp.value.trim()||null);};
       const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog($('ds-dialog-input').value);btns.appendChild(bOk);
       const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
     } else if(type==='textarea'){
-      $('ds-dialog-textarea').style.display='';
-      $('ds-dialog-textarea').placeholder=opts.placeholder||'';
-      setTimeout(()=>$('ds-dialog-textarea').focus(),50);
-      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog($('ds-dialog-textarea').value.trim());btns.appendChild(bOk);
+      const ta=$('ds-dialog-textarea');
+      ta.style.display='';
+      ta.placeholder=opts.placeholder||'';
+      ta.value='';
+      setTimeout(()=>{try{ta.focus();}catch(e){}},80);
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';
+      bOk.onclick=()=>_closeDialog($('ds-dialog-textarea').value.trim()||null);btns.appendChild(bOk);
       const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
     } else if(type==='select'){
       const sel=$('ds-dialog-select');sel.style.display='';sel.innerHTML='';
       (opts.options||[]).forEach(o=>{const op=document.createElement('option');op.value=o.value;op.textContent=o.label;sel.appendChild(op);});
-      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';bOk.onclick=()=>_closeDialog(sel.value);btns.appendChild(bOk);
+      const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';
+      bOk.onclick=()=>_closeDialog(sel.value);btns.appendChild(bOk);
       const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
     } else if(type==='confirm'){
       const bOk=document.createElement('button');bOk.className='bs '+(opts.danger?'bd2':'ba');bOk.textContent=opts.okLabel||'OK';bOk.onclick=()=>_closeDialog(true);btns.appendChild(bOk);
@@ -2016,10 +2021,11 @@ async function loadAdmReports(){
 
 async function admDeleteGame(gid, title, authorName, authorId){
   const feedback=await dsTextarea('削除理由・作者へのフィードバックを入力してください','🗑 ゲームを削除',{placeholder:'例: 規約違反のため削除します。具体的には...'});
-  if(!feedback)return;
+  if(feedback===null)return; // キャンセルのみ中断、空文字はOK
   const daysStr=await dsPrompt('異議申し立ての猶予日数（数字のみ）','猶予日数',{placeholder:'例: 7'});
+  if(daysStr===null)return;
   const days=parseInt(daysStr);
-  if(!days||days<1){toast('猶予日数が無効です','e');return;}
+  if(!days||days<1){toast('猶予日数は1以上の数字を入力してください','e');return;}
   const deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
   try{
     // ゲームを削除済みにする
