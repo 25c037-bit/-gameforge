@@ -2195,7 +2195,7 @@ async function loadAdmAppeals(){
     c.appendChild(ttl);
 
     for(const ap of appeals){
-      const {data:g}=await sb.from('games').select('title,author_name,author_id,appeal_deadline,published_version,appeal_count,hidden_reason,flag_reason').eq('id',ap.game_id).single().catch(()=>({data:null}));
+      let g=null;try{const r=await sb.from('games').select('title,author_name,author_id,appeal_deadline,published_version,appeal_count,hidden_reason,flag_reason').eq('id',ap.game_id).single();g=r.data;}catch(e){}
       const deadline=g?.appeal_deadline?new Date(g.appeal_deadline):null;
       const expired=deadline&&deadline<new Date();
       const appealCount=g?.appeal_count||0;
@@ -2358,7 +2358,7 @@ async function revokeAdmin(uid2){if(!await dsConfirm('管理者権限を解除�
 async function loadMaintenance(){
   const c=$('adm-c');
   // Get current maintenance state
-  const { data: mData } = await sb.from('settings').select('*').eq('key','maintenance').single().catch(()=>({data:null}));
+  let mData=null;try{const r=await sb.from('settings').select('*').eq('key','maintenance').single();mData=r.data;}catch(e){}
   const isOn = mData?.value === 'true';
 
   c.innerHTML=`
