@@ -1928,17 +1928,21 @@ async function submitReport(){
 async function loadAdmReports(){
   const c=$('adm-c');c.innerHTML='<div class="spin"></div>';
   try{
-    // 全通報を取得（game_idでグループ化）
     const {data:reps}=await sb.from('game_reports').select('*').order('created_at',{ascending:false});
-    const {data:games}=await sb.from('games').select('id,title,author_name,published_version,report_status,report_checked_version,is_published,banned_permanently').order('updated_at',{ascending:false});
+    const {data:games}=await sb.from('games').select('id,title,author_id,author_name,published_version,report_status,report_checked_version,is_published,banned_permanently').order('updated_at',{ascending:false});
+    // 通報者のユーザー名を取得
+    const reporterIds=[...new Set((reps||[]).map(r=>r.reporter_id))];
+    let reporterMap={};
+    if(reporterIds.length){
+      const {data:reporters}=await sb.from('profiles').select('id,username,display_name,avatar').in('id',reporterIds);
+      (reporters||[]).forEach(r=>reporterMap[r.id]=r);
+    }
 
-    // game_idでグループ化
     const grouped={};
     (reps||[]).forEach(r=>{
-      if(!grouped[r.game_id])grouped[r.game_id]={game_id:r.game_id,reports:[],latest:r.created_at};
-      grouped[r.game_id].reports.push(r);
+      if(!grouped[r.game_id])grouped[r.game_id]=[];
+      grouped[r.game_id].push(r);
     });
-
     const gameMap={};
     (games||[]).forEach(g=>gameMap[g.id]=g);
 
@@ -1946,124 +1950,94 @@ async function loadAdmReports(){
     const keys=Object.keys(grouped);
     if(!keys.length){c.innerHTML='<p style="color:var(--tx3);font-size:.82rem;padding:1rem">通報はありません</p>';return;}
 
-    const title=document.createElement('div');
-    title.style.cssText='font-size:.78rem;color:var(--tx2);margin-bottom:.8rem;font-weight:700';
-    title.textContent='🚩 通報されたゲーム一覧';
-    c.appendChild(title);
+    const ttl=document.createElement('div');
+    ttl.style.cssText='font-size:.78rem;color:var(--tx2);margin-bottom:.8rem;font-weight:700';
+    ttl.textContent='🚩 通報されたゲーム一覧 ('+keys.length+'件)';
+    c.appendChild(ttl);
 
     keys.forEach(gid=>{
       const g=gameMap[gid];
       if(!g)return;
-      const repList=grouped[gid].reports;
+      const repList=grouped[gid];
       const repCount=repList.length;
 
-      // ステータス判定
-      // green: 確認済み かつ バージョン変わってない
-      // red: 確認済みだったが新バージョンで通報あり
-      // none: 未確認
-      let statusColor='var(--a3)'; // 未確認=黄
-      let statusLabel='⚠️ 未確認';
+      let statusColor='var(--a3)',statusLabel='⚠️ 未確認';
       if(g.report_status==='checked'){
-        if(g.report_checked_version===g.published_version){
-          statusColor='var(--green)';statusLabel='🟢 確認済み';
-        } else {
-          statusColor='var(--red)';statusLabel='🔴 要再確認（バージョン更新）';
-        }
+        if(g.report_checked_version===g.published_version){statusColor='var(--green)';statusLabel='🟢 確認済み';}
+        else{statusColor='var(--red)';statusLabel='🔴 要再確認';}
       }
-      if(g.banned_permanently){statusColor='#888';statusLabel='⛔ 永久BAN済み';}
+      if(g.banned_permanently){statusColor='#888';statusLabel='⛔ 永久BAN';}
 
-      const card=document.createElement('div');
-      card.className='ssec';
-      card.style.marginBottom='.6rem';
+      const card=document.createElement('div');card.className='ssec';card.style.marginBottom='.6rem';
 
       // ヘッダー
       const hdr=document.createElement('div');
       hdr.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap';
-      hdr.innerHTML=`<span style="font-weight:700;font-size:.85rem">${esc(g.title)}</span>`
-        +`<span style="font-size:.72rem;color:var(--tx3)">by ${esc(g.author_name)}</span>`
-        +`<span style="font-size:.7rem;color:var(--tx3)">v${g.published_version||1}</span>`
-        +`<span style="font-size:.72rem;font-weight:700;color:${statusColor}">${statusLabel}</span>`
-        +`<span style="font-size:.7rem;color:var(--tx3);margin-left:auto">通報数: ${repCount}</span>`;
+      hdr.innerHTML='<span style="font-weight:700;font-size:.88rem">'+esc(g.title)+'</span>'
+        +'<span style="font-size:.72rem;color:var(--tx3)">by '+esc(g.author_name)+'</span>'
+        +'<span style="font-size:.7rem;color:var(--tx3)">v'+(g.published_version||1)+'</span>'
+        +'<span style="margin-left:.3rem;font-size:.72rem;font-weight:700;color:'+statusColor+'">'+statusLabel+'</span>'
+        +'<span style="font-size:.7rem;color:var(--tx3);margin-left:auto">'+repCount+'件の通報</span>';
       card.appendChild(hdr);
 
-      // 通報リスト
+      // 通報リスト（誰が・理由）
       const repUl=document.createElement('div');
-      repUl.style.cssText='background:var(--bg4);border-radius:var(--r);padding:.5rem .7rem;margin-bottom:.6rem;max-height:120px;overflow-y:auto';
+      repUl.style.cssText='background:var(--bg4);border-radius:var(--r);padding:.5rem .7rem;margin-bottom:.6rem;max-height:150px;overflow-y:auto';
       repList.forEach(r=>{
+        const reporter=reporterMap[r.reporter_id];
         const row=document.createElement('div');
-        row.style.cssText='font-size:.75rem;color:var(--tx2);padding:.25rem 0;border-bottom:1px solid var(--bd)';
-        row.textContent='• '+r.reason+' (v'+r.game_version+')';
+        row.style.cssText='font-size:.75rem;color:var(--tx2);padding:.3rem 0;border-bottom:1px solid var(--bd);display:flex;gap:.5rem;align-items:flex-start';
+        row.innerHTML='<span style="color:var(--accent);flex-shrink:0">'+(reporter?esc(reporter.display_name||reporter.username):'不明')+'</span>'
+          +'<span style="color:var(--tx3);flex-shrink:0">v'+r.game_version+'</span>'
+          +'<span style="color:var(--tx2)">'+esc(r.reason)+'</span>'
+          +'<span style="color:var(--tx3);font-size:.68rem;margin-left:auto;flex-shrink:0">'+fd(r.created_at)+'</span>';
         repUl.appendChild(row);
       });
       card.appendChild(repUl);
 
       // ボタン群
-      const btns=document.createElement('div');
-      btns.style.cssText='display:flex;gap:.4rem;flex-wrap:wrap';
-
+      const btns=document.createElement('div');btns.style.cssText='display:flex;gap:.4rem;flex-wrap:wrap';
       if(!g.banned_permanently){
-        // コード確認
-        const bSrc=document.createElement('button');bSrc.className='bs bg';bSrc.style.fontSize='.72rem';bSrc.textContent='💻 コード確認';bSrc.onclick=()=>admSrc(gid);btns.appendChild(bSrc);
-
-        // 問題なし（緑マーク）
+        const bSrc=document.createElement('button');bSrc.className='bs bg';bSrc.style.fontSize='.72rem';bSrc.textContent='💻 コード';bSrc.onclick=()=>admSrc(gid);btns.appendChild(bSrc);
+        const bPlay=document.createElement('button');bPlay.className='bs bg';bPlay.style.fontSize='.72rem';bPlay.textContent='▶ プレイ';bPlay.onclick=()=>openGameUrl(gid);btns.appendChild(bPlay);
         const bOk=document.createElement('button');bOk.className='bs bgn';bOk.style.fontSize='.72rem';bOk.textContent='🟢 問題なし';
-        bOk.onclick=async()=>{
-          await sb.from('games').update({report_status:'checked',report_checked_version:g.published_version}).eq('id',gid);
-          toast('🟢 確認済みにしました','s');loadAdmReports();
-        };btns.appendChild(bOk);
-
-        // ゲーム削除
-        if(g.is_published||!g.banned_permanently){
-          const bDel=document.createElement('button');bDel.className='bs bd2';bDel.style.fontSize='.72rem';bDel.textContent='🗑 削除して通知';
-          bDel.onclick=()=>admDeleteGame(gid,g.title,g.author_name);btns.appendChild(bDel);
-        }
-
-        // 非表示
-        const bHide=document.createElement('button');bHide.className='bs bg';bHide.style.fontSize='.72rem';bHide.style.borderColor='var(--a3)';bHide.style.color='var(--a3)';
+        bOk.onclick=async()=>{await sb.from('games').update({report_status:'checked',report_checked_version:g.published_version}).eq('id',gid);toast('🟢 確認済み','s');loadAdmReports();};btns.appendChild(bOk);
+        const bDel=document.createElement('button');bDel.className='bs bd2';bDel.style.fontSize='.72rem';bDel.textContent='🗑 削除・通知';
+        bDel.onclick=()=>admDeleteGame(gid,g.title,g.author_name,g.author_id);btns.appendChild(bDel);
+        const bHide=document.createElement('button');bHide.className='bs bg';bHide.style.fontSize='.72rem';bHide.style.cssText+='border-color:var(--a3);color:var(--a3)';
         bHide.textContent=g.is_published?'⏸ 非表示':'▶ 再公開';
-        bHide.onclick=async()=>{
-          await sb.from('games').update({is_published:!g.is_published}).eq('id',gid);
-          toast(g.is_published?'非表示にしました':'再公開しました','s');loadAdmReports();
-        };btns.appendChild(bHide);
+        bHide.onclick=async()=>{await sb.from('games').update({is_published:!g.is_published}).eq('id',gid);toast(g.is_published?'非表示':'再公開','s');loadAdmReports();};btns.appendChild(bHide);
       }
-
       card.appendChild(btns);
       c.appendChild(card);
     });
-  }catch(e){c.innerHTML='<p style="color:var(--red);font-size:.82rem">エラー: '+e.message+'</p>';}
+  }catch(e){c.innerHTML='<p style="color:var(--red);font-size:.82rem;padding:1rem">エラー: '+e.message+'</p>';}
 }
 
-async function admDeleteGame(gid, title, authorName){
-  const feedback=await dsTextarea(`「${title}」を削除します
-作者(${authorName})への削除理由・フィードバックを入力してください`,'ゲーム削除',{placeholder:'例: 規約違反のため削除します'});
+async function admDeleteGame(gid, title, authorName, authorId){
+  const feedback=await dsTextarea('削除理由・作者へのフィードバックを入力してください','🗑 ゲームを削除',{placeholder:'例: 規約違反のため削除します。具体的には...'});
   if(!feedback)return;
-  const daysStr=await dsPrompt('異議申し立ての猶予日数','猶予日数設定',{placeholder:'例: 7'});
+  const daysStr=await dsPrompt('異議申し立ての猶予日数（数字のみ）','猶予日数',{placeholder:'例: 7'});
   const days=parseInt(daysStr);
-  if(!days||days<1)return;
+  if(!days||days<1){toast('猶予日数が無効です','e');return;}
   const deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
+  try{
+    // ゲームを削除済みにする
+    const {error}=await sb.from('games').update({
+      is_published:false,
+      flagged:true,
+      flag_reason:feedback,
+      appeal_deadline:deadline
+    }).eq('id',gid);
+    if(error){toast('削除エラー: '+error.message,'e');return;}
 
-  await sb.from('games').update({
-    is_published:false,
-    flagged:true,
-    flag_reason:'管理者により削除: '+feedback,
-    appeal_deadline:deadline
-  }).eq('id',gid);
+    // 作者へDMで通知（相互フォロー不要でシステム通知）
+    const dmText='【管理者通知】ゲーム「'+title+'」が削除されました。\n\n理由: '+feedback+'\n\n異議申し立て期限: '+new Date(deadline).toLocaleDateString('ja-JP')+'\n\nマイゲームページから異議を申し立てることができます。';
+    await sb.from('dms').insert({from_id:ME.id,to_id:authorId,text:dmText,read:false}).catch(()=>{});
 
-  // 削除通知をお知らせとして作者のDMに送る代わりにnoticesに投稿
-  await sb.from('notices').insert({
-    title:`ゲーム「${title}」が削除されました`,
-    body:`削除理由: ${feedback}
-
-異議申し立ての期限: ${new Date(deadline).toLocaleDateString('ja-JP')} まで
-
-ゲームページから異議を申し立てることができます。`,
-    type:'danger',
-    author_id:ME.id,
-    target_game_id:gid
-  }).catch(()=>{});
-
-  toast('削除しました。作者に通知されます。','s');
-  loadAdmReports();
+    toast('🗑 削除しました（猶予'+days+'日）','s');
+    loadAdmReports();
+  }catch(e){toast('エラー: '+e.message,'e');}
 }
 
 // 異議申し立て
