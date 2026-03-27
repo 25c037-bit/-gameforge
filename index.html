@@ -540,17 +540,8 @@ textarea.inp{resize:vertical;min-height:50px}
 </div></div>
 
 <div class="mov" id="m-report"><div class="modal"><div class="mtitle">🚩 ゲームを通報</div>
-  <p style="font-size:.82rem;color:var(--tx2);margin-bottom:.8rem">問題のある内容を報告してください。同じゲームへの通報は1人1回のみです。</p>
-  <div class="fg"><label class="mlbl">通報理由</label>
-    <select class="inp" id="rep-type">
-      <option value="inappropriate">不適切なコンテンツ</option>
-      <option value="spam">スパム・広告</option>
-      <option value="copyright">著作権侵害</option>
-      <option value="harmful">有害・危険なコンテンツ</option>
-      <option value="other">その他</option>
-    </select>
-  </div>
-  <div class="fg"><label class="mlbl">詳細（任意）</label><textarea class="inp" id="rep-detail" rows="3" placeholder="具体的な内容..."></textarea></div>
+  <p style="font-size:.82rem;color:var(--tx2);margin-bottom:.8rem">問題のある内容を具体的に書いてください。同じゲームへの通報は1人1回のみです。</p>
+  <div class="fg"><label class="mlbl">通報理由（自由記述）</label><textarea class="inp" id="rep-detail" rows="4" placeholder="例: キャラクターの動きが不適切です。具体的には..."></textarea></div>
   <div class="ferr" id="rep-err"></div>
   <div class="ma"><button class="bs bg" onclick="closeM('m-report')">キャンセル</button><button class="bs bd2" onclick="submitReport()">🚩 通報する</button></div>
 </div></div>
@@ -660,7 +651,8 @@ function _showDialog(title,msg,type='alert',opts={}){
 
     if(type==='prompt'){
       const inp=$('ds-dialog-input');
-      inp.style.display='';
+      inp.style.display='block';
+      inp.style.width='100%';
       inp.placeholder=opts.placeholder||'';
       inp.value=opts.default||'';
       setTimeout(()=>{try{inp.focus();}catch(e){}},80);
@@ -669,15 +661,16 @@ function _showDialog(title,msg,type='alert',opts={}){
       const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
     } else if(type==='textarea'){
       const ta=$('ds-dialog-textarea');
-      ta.style.display='';
-      ta.placeholder=opts.placeholder||'';
+      ta.style.display='block';
+      ta.style.width='100%';
+      ta.placeholder=opts.placeholder||'入力してください...';
       ta.value='';
       setTimeout(()=>{try{ta.focus();}catch(e){}},80);
       const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';
-      bOk.onclick=()=>_closeDialog($('ds-dialog-textarea').value.trim()||null);btns.appendChild(bOk);
+      bOk.onclick=()=>{const v=$('ds-dialog-textarea').value.trim();_closeDialog(v===''?null:v);};btns.appendChild(bOk);
       const bCa=document.createElement('button');bCa.className='bs bg';bCa.textContent='キャンセル';bCa.onclick=()=>_closeDialog(null);btns.appendChild(bCa);
     } else if(type==='select'){
-      const sel=$('ds-dialog-select');sel.style.display='';sel.innerHTML='';
+      const sel=$('ds-dialog-select');sel.style.display='block';sel.style.width='100%';sel.innerHTML='';
       (opts.options||[]).forEach(o=>{const op=document.createElement('option');op.value=o.value;op.textContent=o.label;sel.appendChild(op);});
       const bOk=document.createElement('button');bOk.className='bs ba';bOk.textContent='OK';
       bOk.onclick=()=>_closeDialog(sel.value);btns.appendChild(bOk);
@@ -1910,12 +1903,12 @@ function openReportModal(gid){
 
 async function submitReport(){
   if(!_reportGid||!ME){closeM('m-report');return;}
-  const type=$('rep-type').value;
   const detail=$('rep-detail').value.trim();
   const err=$('rep-err');err.textContent='';
+  if(!detail){err.textContent='通報理由を入力してください';return;}
   try{
     const {data:g}=await sb.from('games').select('published_version,author_id').eq('id',_reportGid).single();
-    const reason=type+(detail?': '+detail:'');
+    const reason=detail;
     await sb.from('game_reports').upsert({
       id:ME.id+'_'+_reportGid,
       game_id:_reportGid,
