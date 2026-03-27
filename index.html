@@ -1076,21 +1076,21 @@ async function loadMG(){
     const remainAppeals=3-appealCount;
     const now=new Date();
     const deadline=g.appeal_deadline?new Date(g.appeal_deadline):null;
-    const expired=deadline&&deadline<now;
+    const expired=deadline&&deadline<now&&!g.edit_unlocked;
 
     // バッジ
     let badge='';
     if(g.banned_permanently) badge='<span class="bdg bg-r">⛔ 永久BAN</span>';
-    else if(expired&&g.flagged) badge='<span class="bdg bg-r">⏰ 期限切れ・削除予定</span>';
-    else if(g.flagged&&!g.edit_unlocked) badge='<span class="bdg bg-r">🚩 非表示中</span>';
     else if(g.flagged&&g.edit_unlocked) badge='<span class="bdg bg-y">✏️ 修正中（要再公開）</span>';
+    else if(expired&&g.flagged) badge='<span class="bdg bg-r">⏰ 期限切れ・削除予定</span>';
+    else if(g.flagged) badge='<span class="bdg bg-r">🚩 非表示中</span>';
     else if(g.is_published) badge='<span class="bdg bg-g">● 公開中 v'+(g.published_version||1)+'</span>';
     else badge='<span class="bdg bg-x">○ 下書き</span>';
 
     // 期限表示
     let deadlineHtml='';
-    if(deadline&&g.flagged){
-      deadlineHtml='<span style="font-size:.65rem;color:'+(expired?'var(--red)':'var(--a3)')+'">修正期限: '+deadline.toLocaleDateString('ja-JP')+(expired?' ⚠️期限切れ':'')+'</span>';
+    if(deadline&&g.flagged&&g.edit_unlocked){
+      deadlineHtml='<span style="font-size:.65rem;color:'+(expired?'var(--red)':'var(--green)')+'">修正期限: '+deadline.toLocaleDateString('ja-JP')+(expired?' ⚠️期限切れ':'')+'</span>';
     }
 
     // 上段：タイトル・バッジ
@@ -1118,8 +1118,8 @@ async function loadMG(){
       row.appendChild(fb);
     }
 
-    // 残り異議申し立て回数
-    if(g.flagged&&!g.banned_permanently&&!expired){
+    // 残り異議申し立て回数（非表示中は常に表示）
+    if(g.flagged&&!g.banned_permanently&&!g.permanently_deleted){
       const rem=document.createElement('div');
       rem.style.cssText='font-size:.7rem;color:var(--tx3)';
       rem.textContent='異議申し立て残り: '+remainAppeals+'/3回';
@@ -1147,16 +1147,21 @@ async function loadMG(){
         }
       }
 
-      // 異議申し立て（非表示中・期限内・残り回数あり）
-      if(g.flagged&&!g.edit_unlocked&&deadline&&!expired&&remainAppeals>0){
+      // 異議申し立て（非表示中・edit_unlocked=false・残り回数あり）
+      // ※ appeal_deadline は承認後に設定されるので、非表示直後はnull
+      if(g.flagged&&!g.edit_unlocked&&!g.banned_permanently&&remainAppeals>0){
         const pendingAppeal=appeal&&appeal.status==='pending';
         if(!pendingAppeal){
-          const bAp=document.createElement('button');bAp.className='bs bg';bAp.style.cssText='border-color:var(--a2);color:var(--a2);font-size:.72rem';
+          const bAp=document.createElement('button');bAp.className='bs bg';
+          bAp.style.cssText='border-color:var(--a2);color:var(--a2);font-size:.72rem';
           bAp.textContent='📝 異議申立 (残'+remainAppeals+'回)';
-          bAp.onclick=()=>openAppealModal(g.id,g.title,appealCount);row.appendChild(bAp);
+          bAp.onclick=()=>openAppealModal(g.id,g.title,appealCount);
           btns.appendChild(bAp);
         } else {
-          const pend=document.createElement('span');pend.style.cssText='font-size:.72rem;color:var(--a3)';pend.textContent='⏳ 審査中...';btns.appendChild(pend);
+          const pend=document.createElement('span');
+          pend.style.cssText='font-size:.72rem;color:var(--a3)';
+          pend.textContent='⏳ 審査中...';
+          btns.appendChild(pend);
         }
       }
     }
