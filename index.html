@@ -495,33 +495,59 @@ textarea.inp{resize:vertical;min-height:50px}
 </div><!-- /app -->
 
 <!-- MODALS -->
-<div class="mov" id="m-create"><div class="modal"><div class="mtitle">✨ 新規プロジェクト作成</div>
-  <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
-  <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
-  <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
-  <div class="fg"><label>言語・モードを選択</label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
-      <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
-        <div style="font-size:1.5rem">🌐</div>
-        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
-        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
-      </button>
-      <button class="lang-opt" data-lang="python" onclick="selLang(this)">
-        <div style="font-size:1.5rem">🐍</div>
-        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
-        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
-      </button>
+<div class="mov" id="m-create"><div class="modal wide"><div class="mtitle">✨ 新規プロジェクト作成</div>
+  <!-- タブ切り替え -->
+  <div style="display:flex;gap:.4rem;margin-bottom:1rem">
+    <button class="atab2 on" id="tab-manual" onclick="swCreateTab('manual')">✏️ 手動作成</button>
+    <button class="atab2" id="tab-ai" onclick="swCreateTab('ai')">🤖 AIに作ってもらう</button>
+  </div>
+
+  <!-- 手動作成パネル -->
+  <div id="panel-manual">
+    <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
+    <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
+    <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
+    <div class="fg"><label>言語・モードを選択</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
+        <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
+          <div style="font-size:1.5rem">🌐</div>
+          <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
+          <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
+        </button>
+        <button class="lang-opt" data-lang="python" onclick="selLang(this)">
+          <div style="font-size:1.5rem">🐍</div>
+          <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
+          <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
+          <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
+        </label>
+      </div>
+      <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
+        ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
+    <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
+  </div>
+
+  <!-- AI作成パネル -->
+  <div id="panel-ai" style="display:none">
+    <div class="fg"><label>作りたいゲームを説明してください</label>
+      <textarea class="inp" id="ai-prompt" rows="4" placeholder="例: 左右に動く壁を避けながら落ちてくるボールをキャッチするゲーム。難易度が上がるにつれて速くなる。スコアが表示される。"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.7rem">
       <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
-        <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
+        <input type="checkbox" id="ai-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
       </label>
     </div>
-    <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
-      ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
+    <div id="ai-status" style="display:none;padding:.7rem;background:var(--bg4);border-radius:var(--r);font-size:.8rem;color:var(--tx2);margin-bottom:.7rem;line-height:1.6">
+      <div class="spin" style="display:inline-block;margin-right:.4rem"></div> AIがゲームを生成中...
     </div>
+    <div class="ferr" id="ai-err"></div>
+    <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" id="btn-ai-gen" onclick="handleAICreate()">🤖 AIに作ってもらう</button></div>
   </div>
-  <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
 </div></div>
 
 <div class="mov" id="m-deploy"><div class="modal"><div class="mtitle">🚀 デプロイ確認</div>
@@ -1188,7 +1214,103 @@ async function checkExpiredGames(){
 // ════════════════════════════════════════════
 //  CREATE / EDITOR
 // ════════════════════════════════════════════
-function openCM(){$('nc-t').value='';$('nc-d').value='';$('nc-h').value='';openM('m-create');}
+function openCM(){
+  $('nc-t').value='';$('nc-d').value='';$('nc-h').value='';
+  $('ai-prompt').value='';$('ai-err').textContent='';
+  $('ai-status').style.display='none';
+  swCreateTab('manual');
+  openM('m-create');
+}
+
+function swCreateTab(tab){
+  $('tab-manual').classList.toggle('on',tab==='manual');
+  $('tab-ai').classList.toggle('on',tab==='ai');
+  $('panel-manual').style.display=tab==='manual'?'':'none';
+  $('panel-ai').style.display=tab==='ai'?'':'none';
+}
+
+async function handleAICreate(){
+  const prompt=$('ai-prompt').value.trim();
+  const useDb=$('ai-db')?.checked||false;
+  const errEl=$('ai-err');errEl.textContent='';
+  if(!prompt){errEl.textContent='ゲームの説明を入力してください';return;}
+
+  const btn=$('btn-ai-gen');btn.disabled=true;btn.textContent='⏳ 生成中...';
+  $('ai-status').style.display='';
+
+  try{
+    // Anthropic APIを呼び出し
+    const systemPrompt=`あなたはゲーム開発AIです。ユーザーの説明に基づいて、ブラウザで動くHTMLゲームを作成してください。
+以下のJSON形式のみで返答してください（他の文章は一切不要）:
+{
+  "title": "ゲームタイトル",
+  "description": "ゲームの説明（1〜2文）",
+  "how_to_play": "遊び方の説明",
+  "html": "HTMLのbody内のコード",
+  "css": "CSSコード",
+  "js": "JavaScriptコード"
+}
+${useDb?'リアルタイムDBを使う場合はJSコード内でGF.set(key,value)/GF.get(key)を使用してください。':''}
+注意:
+- 完全に動作するゲームを作ること
+- HTMLはbodyタグの中身のみ（doctype/html/head/bodyタグ不要）
+- CSSはstyleタグなし、JSはscriptタグなし
+- 日本語でコメントを書く
+- スマホでも遊べるようにする`;
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        system:systemPrompt,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    const data=await res.json();
+    if(!res.ok){errEl.textContent='APIエラー: '+(data.error?.message||res.status);return;}
+
+    const text=data.content?.find(c=>c.type==='text')?.text||'';
+    // JSONを抽出
+    const jsonMatch=text.match(/\{[\s\S]*\}/);
+    if(!jsonMatch){errEl.textContent='AIの返答を解析できませんでした。もう一度試してください。';return;}
+
+    let gameData;
+    try{ gameData=JSON.parse(jsonMatch[0]); }
+    catch(e){errEl.textContent='JSONの解析に失敗しました: '+e.message;return;}
+
+    // D·STUDIOにゲームを保存
+    const id='g_'+uid();
+    const {error}=await sb.from('games').insert({
+      id,
+      title:gameData.title||'AIが作ったゲーム',
+      description:gameData.description||'',
+      how_to_play:gameData.how_to_play||'',
+      author_id:ME.id,
+      author_name:ME.display_name,
+      author_avatar:ME.avatar||'🎮',
+      html:gameData.html||'',
+      css:gameData.css||'',
+      js:gameData.js||'',
+      lang:'html',
+      use_db:useDb
+    });
+
+    if(error){errEl.textContent='保存エラー: '+error.message;return;}
+
+    closeM('m-create');
+    toast('🤖 AIがゲームを作りました！','s');
+    go('editor',id);
+
+  }catch(e){
+    errEl.textContent='エラー: '+e.message;
+  }finally{
+    btn.disabled=false;btn.textContent='🤖 AIに作ってもらう';
+    $('ai-status').style.display='none';
+  }
+}
 function selLang(el){document.querySelectorAll('.lang-opt').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
 document.addEventListener('DOMContentLoaded',()=>{const cb=document.getElementById('nc-db');if(cb)cb.addEventListener('change',()=>{const d=document.getElementById('db-desc');if(d)d.style.display=cb.checked?'':'none';});});
 
