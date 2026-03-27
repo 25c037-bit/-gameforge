@@ -547,10 +547,12 @@ textarea.inp{resize:vertical;min-height:50px}
 </div></div>
 
 <div class="mov" id="m-appeal"><div class="modal"><div class="mtitle">📝 異議申し立て</div>
-  <p style="font-size:.82rem;color:var(--tx2);margin-bottom:.8rem" id="appeal-desc">削除されたゲームについて異議を申し立てることができます。管理者が確認します。</p>
-  <div class="fg"><label class="mlbl">申し立て内容</label><textarea class="inp" id="appeal-msg" rows="5" placeholder="なぜこのゲームが問題ないと思うか説明してください..."></textarea></div>
+  <p style="font-size:.82rem;color:var(--tx2);margin-bottom:.6rem" id="appeal-desc">管理者に異議を申し立てます。内容をしっかり書いてください。</p>
+  <div style="font-size:.72rem;color:var(--a3);margin-bottom:.7rem" id="appeal-remain"></div>
+  <div class="fg"><label class="mlbl">申し立て内容</label><textarea class="inp" id="appeal-msg" rows="4" placeholder="なぜこのゲームが問題ないと思うか具体的に説明してください..."></textarea></div>
+  <div class="fg"><label class="mlbl">希望する猶予期間（日数）</label><input class="inp" type="number" id="appeal-days" placeholder="例: 14" min="1" max="90" style="width:120px"></div>
   <div class="ferr" id="appeal-err"></div>
-  <div class="ma"><button class="bs bg" onclick="closeM('m-appeal')">キャンセル</button><button class="bs ba" onclick="submitAppeal()">送信する</button></div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-appeal')">キャンセル</button><button class="bs ba" onclick="submitAppeal()">📝 送信する</button></div>
 </div></div>
 
 <div class="mov" id="m-upload"><div class="modal"><div class="mtitle">🎬 動画を投稿</div>
@@ -1054,38 +1056,122 @@ async function handleUpload(){
 // ════════════════════════════════════════════
 async function loadMG(){
   const body=$('mg-b');body.innerHTML='<div class="spin"></div>';
-  const { data: games } = await sb.from('games').select('id,title,description,is_published,published_version,plays,updated_at,flagged,flag_reason,banned_permanently,appeal_deadline').eq('author_id',ME.id).order('updated_at',{ascending:false});
+  // 永久削除チェック（期限切れで完全削除）
+  await checkExpiredGames();
+  const {data:games}=await sb.from('games').select('id,title,is_published,published_version,plays,updated_at,flagged,flag_reason,hidden_reason,banned_permanently,permanently_deleted,appeal_deadline,appeal_count,edit_unlocked').eq('author_id',ME.id).order('updated_at',{ascending:false});
   body.innerHTML='';
   if(!games?.length){body.innerHTML='<div class="empty"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>';return;}
+  // 各ゲームの異議申し立て情報取得
+  const gameIds=games.map(g=>g.id);
+  const {data:appeals}=await sb.from('game_appeals').select('game_id,status,appeal_number,deadline_requested,feedback').in('game_id',gameIds).order('created_at',{ascending:false});
+  const appealMap={};
+  (appeals||[]).forEach(a=>{if(!appealMap[a.game_id])appealMap[a.game_id]=a;});
+
   games.forEach(g=>{
-    const row=document.createElement('div');row.className='mrow';
-    let badge;
+    if(g.permanently_deleted)return; // 永久削除済みは表示しない
+    const row=document.createElement('div');row.className='mrow';row.style.flexDirection='column';row.style.alignItems='flex-start';row.style.gap='.5rem';
+
+    const appeal=appealMap[g.id];
+    const appealCount=g.appeal_count||0;
+    const remainAppeals=3-appealCount;
+    const now=new Date();
+    const deadline=g.appeal_deadline?new Date(g.appeal_deadline):null;
+    const expired=deadline&&deadline<now;
+
+    // バッジ
+    let badge='';
     if(g.banned_permanently) badge='<span class="bdg bg-r">⛔ 永久BAN</span>';
-    else if(g.flagged) badge='<span class="bdg bg-r">🚩 削除済み</span>';
-    else if(g.is_published) badge=`<span class="bdg bg-g">● 公開中 v${g.published_version}</span>`;
+    else if(expired&&g.flagged) badge='<span class="bdg bg-r">⏰ 期限切れ・削除予定</span>';
+    else if(g.flagged&&!g.edit_unlocked) badge='<span class="bdg bg-r">🚩 非表示中</span>';
+    else if(g.flagged&&g.edit_unlocked) badge='<span class="bdg bg-y">✏️ 修正中（要再公開）</span>';
+    else if(g.is_published) badge='<span class="bdg bg-g">● 公開中 v'+(g.published_version||1)+'</span>';
     else badge='<span class="bdg bg-x">○ 下書き</span>';
 
-    // 猶予期限表示
+    // 期限表示
     let deadlineHtml='';
-    if(g.flagged&&!g.banned_permanently&&g.appeal_deadline){
-      const dl=new Date(g.appeal_deadline);
-      const expired=dl<new Date();
-      deadlineHtml=` <span style="font-size:.65rem;color:${expired?'var(--red)':'var(--a3)'}">異議期限: ${dl.toLocaleDateString('ja-JP')}${expired?' (期限切れ)':''}</span>`;
+    if(deadline&&g.flagged){
+      deadlineHtml='<span style="font-size:.65rem;color:'+(expired?'var(--red)':'var(--a3)')+'">修正期限: '+deadline.toLocaleDateString('ja-JP')+(expired?' ⚠️期限切れ':'')+'</span>';
     }
 
-    row.innerHTML=`<div class="minfo"><div class="mtitle">${esc(g.title)}</div><div class="mmeta">${badge}${deadlineHtml} &nbsp;👁 ${g.plays||0} &nbsp;${fd(g.updated_at)}</div></div>`;
+    // 上段：タイトル・バッジ
+    const top=document.createElement('div');top.style.cssText='display:flex;align-items:center;gap:.5rem;width:100%;flex-wrap:wrap';
+    top.innerHTML='<div class="mtitle" style="flex:1">'+esc(g.title)+'</div>'
+      +badge
+      +(deadlineHtml?deadlineHtml:'')
+      +'<span style="font-size:.7rem;color:var(--tx3)">👁 '+(g.plays||0)+'</span>'
+      +'<span style="font-size:.7rem;color:var(--tx3)">'+fd(g.updated_at)+'</span>';
+    row.appendChild(top);
 
-    if(!g.banned_permanently){
-      const bPlay=document.createElement('button');bPlay.className='bs bg';bPlay.textContent='▶';bPlay.onclick=()=>openGameUrl(g.id);row.appendChild(bPlay);
-      const bEdit=document.createElement('button');bEdit.className='bs ba';bEdit.textContent='✏️ 編集';bEdit.onclick=()=>go('editor',g.id);row.appendChild(bEdit);
-      // 削除済みで期限内なら異議申し立てボタン
-      if(g.flagged&&g.appeal_deadline&&new Date(g.appeal_deadline)>new Date()){
-        const bAp=document.createElement('button');bAp.className='bs bg';bAp.style.cssText='border-color:var(--a2);color:var(--a2);font-size:.72rem';bAp.textContent='📝 異議申立';
-        bAp.onclick=()=>openAppealModal(g.id);row.appendChild(bAp);
+    // 非表示理由・フィードバック表示
+    if(g.flagged&&(g.hidden_reason||g.flag_reason)){
+      const reason=document.createElement('div');
+      reason.style.cssText='width:100%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:.5rem .7rem;font-size:.76rem;color:var(--tx2)';
+      reason.innerHTML='<span style="color:var(--red);font-weight:700">非表示理由:</span> '+esc(g.hidden_reason||g.flag_reason);
+      row.appendChild(reason);
+    }
+
+    // 承認時フィードバック（修正中）
+    if(g.edit_unlocked&&appeal&&appeal.feedback){
+      const fb=document.createElement('div');
+      fb.style.cssText='width:100%;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:var(--r);padding:.5rem .7rem;font-size:.76rem;color:var(--tx2)';
+      fb.innerHTML='<span style="color:var(--accent);font-weight:700">管理者からのフィードバック:</span> '+esc(appeal.feedback);
+      row.appendChild(fb);
+    }
+
+    // 残り異議申し立て回数
+    if(g.flagged&&!g.banned_permanently&&!expired){
+      const rem=document.createElement('div');
+      rem.style.cssText='font-size:.7rem;color:var(--tx3)';
+      rem.textContent='異議申し立て残り: '+remainAppeals+'/3回';
+      row.appendChild(rem);
+    }
+
+    // ボタン群
+    const btns=document.createElement('div');btns.style.cssText='display:flex;gap:.4rem;flex-wrap:wrap';
+
+    if(!g.banned_permanently&&!expired){
+      // プレイ
+      const bPl=document.createElement('button');bPl.className='bs bg';bPl.textContent='▶';bPl.onclick=()=>openGameUrl(g.id);btns.appendChild(bPl);
+
+      // 編集（edit_unlocked か非表示でない場合）
+      if(!g.flagged||g.edit_unlocked){
+        const bEd=document.createElement('button');bEd.className='bs ba';bEd.textContent='✏️ 編集';bEd.onclick=()=>go('editor',g.id);btns.appendChild(bEd);
+        // edit_unlocked の場合は「修正完了→再公開」ボタン
+        if(g.edit_unlocked){
+          const bPub=document.createElement('button');bPub.className='bs bgn';bPub.style.fontSize='.72rem';bPub.textContent='🚀 修正完了・再公開';
+          bPub.onclick=async()=>{
+            if(!await dsConfirm('修正が完了したので再公開しますか？','再公開確認',{okLabel:'再公開'}))return;
+            await sb.from('games').update({is_published:true,flagged:false,edit_unlocked:false,flag_reason:'',hidden_reason:''}).eq('id',g.id);
+            toast('🚀 再公開しました！','s');loadMG();
+          };btns.appendChild(bPub);
+        }
+      }
+
+      // 異議申し立て（非表示中・期限内・残り回数あり）
+      if(g.flagged&&!g.edit_unlocked&&deadline&&!expired&&remainAppeals>0){
+        const pendingAppeal=appeal&&appeal.status==='pending';
+        if(!pendingAppeal){
+          const bAp=document.createElement('button');bAp.className='bs bg';bAp.style.cssText='border-color:var(--a2);color:var(--a2);font-size:.72rem';
+          bAp.textContent='📝 異議申立 (残'+remainAppeals+'回)';
+          bAp.onclick=()=>openAppealModal(g.id,g.title,appealCount);row.appendChild(bAp);
+          btns.appendChild(bAp);
+        } else {
+          const pend=document.createElement('span');pend.style.cssText='font-size:.72rem;color:var(--a3)';pend.textContent='⏳ 審査中...';btns.appendChild(pend);
+        }
       }
     }
+    row.appendChild(btns);
     body.appendChild(row);
   });
+}
+
+async function checkExpiredGames(){
+  // 期限切れゲームを永久削除
+  const {data:expired}=await sb.from('games').select('id,title').eq('author_id',ME.id).eq('flagged',true).eq('permanently_deleted',false).lt('appeal_deadline',new Date().toISOString());
+  if(!expired?.length)return;
+  for(const g of expired){
+    await sb.from('games').update({permanently_deleted:true,is_published:false,flagged:true}).eq('id',g.id);
+  }
 }
 
 // ════════════════════════════════════════════
@@ -2026,6 +2112,8 @@ async function admDeleteGame(gid, title, authorName, authorId){
       is_published:false,
       flagged:true,
       flag_reason:feedback,
+      hidden_reason:feedback,
+      edit_unlocked:false,
       appeal_deadline:deadline
     }).eq('id',gid);
     if(error){toast('削除エラー: '+error.message,'e');return;}
@@ -2040,36 +2128,45 @@ async function admDeleteGame(gid, title, authorName, authorId){
 }
 
 // 異議申し立て
-function openAppealModal(gid){
+function openAppealModal(gid, title, appealCount){
   _appealGid=gid;
   $('appeal-err').textContent='';
   $('appeal-msg').value='';
+  $('appeal-days').value='';
+  const remain=3-(appealCount||0);
+  $('appeal-remain').textContent='残り異議申し立て回数: '+remain+'/3回（今回で'+(3-remain+1)+'回目）';
   openM('m-appeal');
 }
 
 async function submitAppeal(){
   if(!_appealGid||!ME)return;
   const msg=$('appeal-msg').value.trim();
+  const daysReq=$('appeal-days').value.trim();
   const err=$('appeal-err');err.textContent='';
-  if(!msg){err.textContent='内容を入力してください';return;}
+  if(!msg){err.textContent='申し立て内容を入力してください';return;}
   try{
-    // 既に申し立て済みか確認
-    const {data:ex}=await sb.from('game_appeals').select('id').eq('game_id',_appealGid).eq('author_id',ME.id).maybeSingle().catch(()=>({data:null}));
-    if(ex){err.textContent='すでに異議申し立て済みです';return;}
-
-    const {data:g}=await sb.from('games').select('appeal_deadline').eq('id',_appealGid).single();
-    if(g?.appeal_deadline&&new Date(g.appeal_deadline)<new Date()){
-      err.textContent='申し立て期限が過ぎています';return;
-    }
+    const {data:g}=await sb.from('games').select('appeal_deadline,appeal_count').eq('id',_appealGid).single();
+    if(!g){err.textContent='ゲームが見つかりません';return;}
+    if(g.appeal_deadline&&new Date(g.appeal_deadline)<new Date()){err.textContent='申し立て期限が過ぎています';return;}
+    const appealCount=g.appeal_count||0;
+    if(appealCount>=3){err.textContent='異議申し立ては3回までです';return;}
+    // pending中の申し立てがないか確認
+    const {data:pending}=await sb.from('game_appeals').select('id').eq('game_id',_appealGid).eq('status','pending');
+    if(pending&&pending.length>0){err.textContent='現在審査中の申し立てがあります';return;}
+    const newCount=appealCount+1;
     await sb.from('game_appeals').insert({
       id:'ap_'+Date.now(),
       game_id:_appealGid,
       author_id:ME.id,
       message:msg,
-      status:'pending'
+      status:'pending',
+      appeal_number:newCount,
+      deadline_requested:daysReq||null
     });
+    await sb.from('games').update({appeal_count:newCount}).eq('id',_appealGid);
     closeM('m-appeal');
-    toast('異議申し立てを送信しました','s');
+    toast('📝 異議申し立てを送信しました（'+newCount+'/3回目）','s');
+    loadMG();
   }catch(e){err.textContent='エラー: '+e.message;}
 }
 
@@ -2081,73 +2178,115 @@ async function loadAdmAppeals(){
     c.innerHTML='';
     if(!appeals?.length){c.innerHTML='<p style="color:var(--tx3);font-size:.82rem;padding:1rem">異議申し立てはありません</p>';return;}
 
-    const title=document.createElement('div');
-    title.style.cssText='font-size:.78rem;color:var(--tx2);margin-bottom:.8rem;font-weight:700';
-    title.textContent='📝 異議申し立て一覧';
-    c.appendChild(title);
+    const ttl=document.createElement('div');
+    ttl.style.cssText='font-size:.78rem;color:var(--tx2);margin-bottom:.8rem;font-weight:700';
+    ttl.textContent='📝 異議申し立て一覧 ('+appeals.length+'件)';
+    c.appendChild(ttl);
 
     for(const ap of appeals){
-      const {data:g}=await sb.from('games').select('title,author_name,appeal_deadline,published_version').eq('id',ap.game_id).single().catch(()=>({data:null}));
+      const {data:g}=await sb.from('games').select('title,author_name,author_id,appeal_deadline,published_version,appeal_count,hidden_reason,flag_reason').eq('id',ap.game_id).single().catch(()=>({data:null}));
       const deadline=g?.appeal_deadline?new Date(g.appeal_deadline):null;
       const expired=deadline&&deadline<new Date();
+      const appealCount=g?.appeal_count||0;
 
-      const card=document.createElement('div');
-      card.className='ssec';card.style.marginBottom='.6rem';
+      const card=document.createElement('div');card.className='ssec';card.style.marginBottom='.6rem';
 
-      const statusColor=ap.status==='pending'?'var(--a3)':ap.status==='approved'?'var(--green)':'var(--red)';
-      const statusLabel=ap.status==='pending'?'⏳ 審査中':ap.status==='approved'?'✅ 承認':'❌ 却下';
+      const statusColor=ap.status==='pending'?'var(--a3)':ap.status==='approved'?'var(--green)':ap.status==='rejected_temp'?'var(--a3)':'var(--red)';
+      const statusLabel=ap.status==='pending'?'⏳ 審査中':ap.status==='approved'?'✅ 承認':ap.status==='rejected_temp'?'⏸ 一時却下':'❌ 永久BAN';
 
-      card.innerHTML=`
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
-          <span style="font-weight:700;font-size:.85rem">${esc(g?.title||ap.game_id)}</span>
-          <span style="font-size:.72rem;color:var(--tx3)">by ${esc(g?.author_name||'')}</span>
-          <span style="font-size:.72rem;font-weight:700;color:${statusColor}">${statusLabel}</span>
-          ${deadline?`<span style="font-size:.7rem;color:${expired?'var(--red)':'var(--tx3)'}">期限: ${deadline.toLocaleDateString('ja-JP')}${expired?' (期限切れ)':''}</span>`:''}
-        </div>
-        <div style="background:var(--bg4);border-radius:var(--r);padding:.6rem .8rem;font-size:.8rem;color:var(--tx2);margin-bottom:.6rem;white-space:pre-wrap">${esc(ap.message)}</div>
-        ${ap.feedback?`<div style="background:rgba(0,229,255,.08);border:1px solid var(--accent);border-radius:var(--r);padding:.5rem .7rem;font-size:.78rem;color:var(--tx2);margin-bottom:.6rem"><span style="color:var(--accent);font-weight:700">管理者フィードバック:</span> ${esc(ap.feedback)}</div>`:''}
-      `;
+      // ヘッダー
+      const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap';
+      hdr.innerHTML='<span style="font-weight:700;font-size:.88rem">'+esc(g?.title||ap.game_id)+'</span>'
+        +'<span style="font-size:.72rem;color:var(--tx3)">by '+esc(g?.author_name||'')+'</span>'
+        +'<span style="font-size:.7rem;color:var(--tx3)">'+appealCount+'/3回目</span>'
+        +'<span style="font-size:.72rem;font-weight:700;color:'+statusColor+'">'+statusLabel+'</span>'
+        +(deadline?'<span style="font-size:.7rem;color:'+(expired?'var(--red)':'var(--tx3)')+'">期限: '+deadline.toLocaleDateString('ja-JP')+(expired?' ⚠️':'')+'</span>':'')
+        +(ap.deadline_requested?'<span style="font-size:.7rem;color:var(--a3)">希望猶予: '+ap.deadline_requested+'日</span>':'');
+      card.appendChild(hdr);
+
+      // 非表示理由
+      if(g?.hidden_reason||g?.flag_reason){
+        const rDiv=document.createElement('div');rDiv.style.cssText='background:rgba(239,68,68,.08);border-radius:var(--r);padding:.4rem .7rem;font-size:.74rem;color:var(--tx2);margin-bottom:.4rem';
+        rDiv.innerHTML='<span style="color:var(--red);font-weight:700">非表示理由:</span> '+esc(g.hidden_reason||g.flag_reason);
+        card.appendChild(rDiv);
+      }
+
+      // 申し立て内容
+      const msgDiv=document.createElement('div');msgDiv.style.cssText='background:var(--bg4);border-radius:var(--r);padding:.6rem .8rem;font-size:.8rem;color:var(--tx2);margin-bottom:.5rem;white-space:pre-wrap';
+      msgDiv.textContent=ap.message;card.appendChild(msgDiv);
+
+      // フィードバック表示
+      if(ap.feedback){
+        const fbDiv=document.createElement('div');fbDiv.style.cssText='background:rgba(0,229,255,.08);border:1px solid var(--accent);border-radius:var(--r);padding:.5rem .7rem;font-size:.78rem;color:var(--tx2);margin-bottom:.5rem';
+        fbDiv.innerHTML='<span style="color:var(--accent);font-weight:700">管理者フィードバック:</span> '+esc(ap.feedback);
+        card.appendChild(fbDiv);
+      }
 
       if(ap.status==='pending'){
         const btns=document.createElement('div');btns.style.cssText='display:flex;gap:.4rem;flex-wrap:wrap';
 
         // コード確認
-        const bSrc=document.createElement('button');bSrc.className='bs bg';bSrc.style.fontSize='.72rem';bSrc.textContent='💻 コード確認';bSrc.onclick=()=>admSrc(ap.game_id);btns.appendChild(bSrc);
+        const bSrc=document.createElement('button');bSrc.className='bs bg';bSrc.style.fontSize='.72rem';bSrc.textContent='💻 コード';bSrc.onclick=()=>admSrc(ap.game_id);btns.appendChild(bSrc);
+        // プレイ
+        const bPl=document.createElement('button');bPl.className='bs bg';bPl.style.fontSize='.72rem';bPl.textContent='▶ プレイ';bPl.onclick=()=>openGameUrl(ap.game_id);btns.appendChild(bPl);
 
-        // 承認（ゲーム返却）
-        const bApp=document.createElement('button');bApp.className='bs bgn';bApp.style.fontSize='.72rem';bApp.textContent='✅ 承認・ゲーム返却';
+        // 承認（編集権限付与）
+        const bApp=document.createElement('button');bApp.className='bs bgn';bApp.style.fontSize='.72rem';bApp.textContent='✅ 承認・編集権限付与';
         bApp.onclick=async()=>{
-          const feedback=await dsTextarea('作者へのフィードバック（修正してほしい点など）を入力してください','承認・ゲーム返却',{placeholder:'例: ○○の部分を修正してください'});
-          if(!feedback)return;
-          const daysStr=await dsPrompt('修正猶予日数','猶予日数設定',{placeholder:'例: 7'});
+          const feedback=await dsTextarea('作者へのフィードバック（修正してほしい点など）','✅ 承認・フィードバック',{placeholder:'例: ○○の部分を修正してください'});
+          if(feedback===null)return;
+          const daysHint=ap.deadline_requested?ap.deadline_requested:'7';
+          const daysStr=await dsPrompt('修正猶予日数（希望: '+daysHint+'日）','猶予日数設定',{placeholder:'例: '+daysHint,default:daysHint});
+          if(daysStr===null)return;
           const days=parseInt(daysStr);
-          if(!days||days<1)return;
-          const deadline2=new Date(Date.now()+days*24*3600*1000).toISOString();
+          if(!days||days<1){toast('猶予日数が無効です','e');return;}
+          const newDeadline=new Date(Date.now()+days*24*3600*1000).toISOString();
           await Promise.all([
             sb.from('game_appeals').update({status:'approved',feedback}).eq('id',ap.id),
-            sb.from('games').update({is_published:false,flagged:false,appeal_deadline:deadline2}).eq('id',ap.game_id)
+            sb.from('games').update({edit_unlocked:true,flagged:true,is_published:false,appeal_deadline:newDeadline}).eq('id',ap.game_id)
           ]);
-          toast('✅ 承認しました。ゲームを返却しました。','s');
+          // DMで通知
+          const dmText='【管理者通知】ゲーム「'+(g?.title||'')+'」の異議申し立てが承認されました。\n\nフィードバック: '+feedback+'\n\n修正期限: '+new Date(newDeadline).toLocaleDateString('ja-JP')+'\n\nマイゲームページから編集・再公開できます。';
+          await sb.from('dms').insert({from_id:ME.id,to_id:g?.author_id||ap.author_id,text:dmText,read:false}).catch(()=>{});
+          toast('✅ 承認しました。作者に編集権限を付与しました。','s');
           loadAdmAppeals();
         };btns.appendChild(bApp);
 
-        // 却下（永久BAN）
-        const bRej=document.createElement('button');bRej.className='bs bd2';bRej.style.fontSize='.72rem';bRej.textContent='❌ 却下・永久BAN';
-        bRej.onclick=async()=>{
-          if(!await dsConfirm('却下して永久BANしますか？この操作は取り消せません。','異議却下・永久BAN',{danger:true,okLabel:'却下・永久BAN'}))return;
+        // 一時却下（また申し立て可能）
+        const bTmp=document.createElement('button');bTmp.className='bs bg';bTmp.style.cssText='font-size:.72rem;border-color:var(--a3);color:var(--a3)';bTmp.textContent='⏸ 一時却下';
+        bTmp.onclick=async()=>{
+          const feedback=await dsTextarea('却下理由を作者に伝えてください','⏸ 一時却下',{placeholder:'例: ○○を修正しないと承認できません'});
+          if(feedback===null)return;
+          await Promise.all([
+            sb.from('game_appeals').update({status:'rejected_temp',feedback}).eq('id',ap.id),
+            sb.from('games').update({edit_unlocked:false}).eq('id',ap.game_id)
+          ]);
+          // DMで通知
+          const dmText2='【管理者通知】ゲーム「'+(g?.title||'')+'」の異議申し立てが一時却下されました。\n\n理由: '+feedback+'\n\n残り異議申し立て回数: '+(3-appealCount)+'回\n\nマイゲームページから再度異議申し立てができます。';
+          await sb.from('dms').insert({from_id:ME.id,to_id:g?.author_id||ap.author_id,text:dmText2,read:false}).catch(()=>{});
+          toast('⏸ 一時却下しました','s');
+          loadAdmAppeals();
+        };btns.appendChild(bTmp);
+
+        // 永久BAN（3回使い切り or 重大違反）
+        const bBan=document.createElement('button');bBan.className='bs bd2';bBan.style.fontSize='.72rem';bBan.textContent='⛔ 永久BAN';
+        bBan.onclick=async()=>{
+          if(!await dsConfirm('永久BANしますか？このゲームは二度と復活できません。','⛔ 永久BAN',{danger:true,okLabel:'永久BAN'}))return;
           await Promise.all([
             sb.from('game_appeals').update({status:'rejected'}).eq('id',ap.id),
-            sb.from('games').update({banned_permanently:true,is_published:false,flagged:true}).eq('id',ap.game_id)
+            sb.from('games').update({banned_permanently:true,permanently_deleted:false,is_published:false,flagged:true}).eq('id',ap.game_id)
           ]);
-          toast('❌ 却下・永久BANしました','s');
+          const dmText3='【管理者通知】ゲーム「'+(g?.title||'')+'」は永久BANとなりました。このゲームは復活できません。';
+          await sb.from('dms').insert({from_id:ME.id,to_id:g?.author_id||ap.author_id,text:dmText3,read:false}).catch(()=>{});
+          toast('⛔ 永久BANしました','s');
           loadAdmAppeals();
-        };btns.appendChild(bRej);
+        };btns.appendChild(bBan);
 
         card.appendChild(btns);
       }
       c.appendChild(card);
     }
-  }catch(e){c.innerHTML='<p style="color:var(--red);font-size:.82rem">エラー: '+e.message+'</p>';}
+  }catch(e){c.innerHTML='<p style="color:var(--red);font-size:.82rem;padding:1rem">エラー: '+e.message+'</p>';}
 }
 
 async function admFlagV(vid){if(!await dsConfirm('この動画を非表示にしますか？','動画を非表示',{danger:true,okLabel:'非表示'}))return;await sb.from('videos').update({flagged:true}).eq('id',vid);toast('非表示にしました','s');loadAdmin();}
