@@ -413,7 +413,6 @@ textarea.inp{resize:vertical;min-height:50px}
           <input class="edti" type="text" id="ed-t" placeholder="ゲームタイトル..." oninput="schedSave()">
           <span class="sst s" id="sst">● 保存済</span>
           <button class="bs bg" onclick="refreshPV()" title="更新">⟳</button>
-          <button class="bs bg" onclick="openAIAssist()" style="border-color:var(--a2);color:var(--a2)" title="AIアシスタント">🤖 AI</button>
           <button class="bs ba" onclick="handleDeploy()">🚀 公開</button>
         </div>
         <div class="tbar" id="ed-tabs"></div>
@@ -431,9 +430,24 @@ textarea.inp{resize:vertical;min-height:50px}
           <div class="vlist" id="vlist" style="display:none;margin-top:.35rem"></div>
         </div>
       </div>
-      <div class="edr">
+      <div class="edr" style="display:flex;flex-direction:column">
         <div class="pvtb"><span class="pvtitle">▶ PREVIEW</span><span style="flex:1"></span><button class="bs bg" onclick="openGameUrl(edGID)" style="font-size:.68rem">別ページで開く ↗</button></div>
-        <div class="pvwrap"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
+        <div class="pvwrap" style="flex:1"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
+        <!-- AIアシスタントパネル -->
+        <div id="ai-panel" style="height:280px;display:flex;flex-direction:column;border-top:2px solid var(--a2);flex-shrink:0;background:var(--bg2)">
+          <div style="padding:.4rem .8rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--bd);flex-shrink:0">
+            <span style="font-size:.75rem;font-weight:700;color:var(--a2)">🤖 AIアシスタント</span>
+            <span style="font-size:.68rem;color:var(--tx3)">コードについて何でも聞いてください</span>
+            <button class="bs bg" onclick="toggleAIPanel()" style="font-size:.65rem;margin-left:auto;padding:.2rem .5rem">▼ 閉じる</button>
+          </div>
+          <div id="ai-chat-msgs" style="flex:1;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.5rem">
+            <div style="font-size:.75rem;color:var(--tx3);text-align:center;padding:.5rem">💬 「ジャンプ機能を追加して」「バグを直して」など自由に話しかけてください</div>
+          </div>
+          <div style="padding:.4rem .6rem;border-top:1px solid var(--bd);display:flex;gap:.4rem;flex-shrink:0">
+            <textarea id="ai-chat-input" placeholder="例: スコアを追加して / 背景を変えて..." style="flex:1;padding:.4rem .6rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.78rem;outline:none;resize:none;height:48px;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMsg();}"></textarea>
+            <button class="bs ba" onclick="sendAIMsg()" style="align-self:flex-end;padding:.4rem .7rem;font-size:.76rem">送信</button>
+          </div>
+        </div>
       </div>
     </div>
     <!-- PLAY -->
@@ -519,59 +533,33 @@ textarea.inp{resize:vertical;min-height:50px}
 </div><!-- /app -->
 
 <!-- MODALS -->
-<div class="mov" id="m-create"><div class="modal wide"><div class="mtitle">✨ 新規プロジェクト作成</div>
-  <!-- タブ切り替え -->
-  <div style="display:flex;gap:.4rem;margin-bottom:1rem">
-    <button class="atab2 on" id="tab-manual" onclick="swCreateTab('manual')">✏️ 手動作成</button>
-    <button class="atab2" id="tab-ai" onclick="swCreateTab('ai')">🤖 AIに作ってもらう</button>
-  </div>
-
-  <!-- 手動作成パネル -->
-  <div id="panel-manual">
-    <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
-    <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
-    <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
-    <div class="fg"><label>言語・モードを選択</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
-        <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
-          <div style="font-size:1.5rem">🌐</div>
-          <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
-          <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
-        </button>
-        <button class="lang-opt" data-lang="python" onclick="selLang(this)">
-          <div style="font-size:1.5rem">🐍</div>
-          <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
-          <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
-        </button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
-        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
-          <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
-        </label>
-      </div>
-      <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
-        ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
-      </div>
+<div class="mov" id="m-create"><div class="modal"><div class="mtitle">✨ 新規プロジェクト作成</div>
+  <div class="fg"><label>タイトル</label><input class="inp" type="text" id="nc-t" placeholder="タイトル..."></div>
+  <div class="fg"><label>説明</label><textarea class="inp" id="nc-d" rows="2" placeholder="説明..."></textarea></div>
+  <div class="fg"><label>遊び方</label><textarea class="inp" id="nc-h" rows="2" placeholder="遊び方..."></textarea></div>
+  <div class="fg"><label>言語・モードを選択</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem" id="lang-sel">
+      <button class="lang-opt on" data-lang="html" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🌐</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">HTML / CSS / JS</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">Webゲーム・アプリ</div>
+      </button>
+      <button class="lang-opt" data-lang="python" onclick="selLang(this)">
+        <div style="font-size:1.5rem">🐍</div>
+        <div style="font-weight:700;font-size:.85rem;margin-top:.3rem">Python</div>
+        <div style="font-size:.7rem;opacity:.7;margin-top:.2rem">ブラウザでPython実行</div>
+      </button>
     </div>
-    <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
-  </div>
-
-  <!-- AI作成パネル -->
-  <div id="panel-ai" style="display:none">
-    <div class="fg"><label>作りたいゲームを説明してください</label>
-      <textarea class="inp" id="ai-prompt" rows="4" placeholder="例: 左右に動く壁を避けながら落ちてくるボールをキャッチするゲーム。難易度が上がるにつれて速くなる。スコアが表示される。"></textarea>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.7rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.5rem">
       <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--tx2)">
-        <input type="checkbox" id="ai-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
+        <input type="checkbox" id="nc-db" style="accent-color:var(--accent)"> 🗄️ リアルタイムDB を使う
       </label>
     </div>
-    <div id="ai-status" style="display:none;padding:.7rem;background:var(--bg4);border-radius:var(--r);font-size:.8rem;color:var(--tx2);margin-bottom:.7rem;line-height:1.6">
-      <div class="spin" style="display:inline-block;margin-right:.4rem"></div> AIがゲームを生成中...
+    <div id="db-desc" style="display:none;font-size:.75rem;color:var(--tx3);margin-top:.4rem;padding:.5rem;background:var(--bg4);border-radius:6px">
+      ゲーム内から <code style="color:var(--accent)">GF.set('key', value)</code> / <code style="color:var(--accent)">GF.get('key')</code> でデータを保存・取得できます
     </div>
-    <div class="ferr" id="ai-err"></div>
-    <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" id="btn-ai-gen" onclick="handleAICreate()">🤖 AIに作ってもらう</button></div>
   </div>
+  <div class="ma"><button class="bs bg" onclick="closeM('m-create')">キャンセル</button><button class="bs ba" onclick="handleCreate()">作成して編集</button></div>
 </div></div>
 
 <div class="mov" id="m-deploy"><div class="modal"><div class="mtitle">🚀 デプロイ確認</div>
@@ -1238,20 +1226,7 @@ async function checkExpiredGames(){
 // ════════════════════════════════════════════
 //  CREATE / EDITOR
 // ════════════════════════════════════════════
-function openCM(){
-  $('nc-t').value='';$('nc-d').value='';$('nc-h').value='';
-  $('ai-prompt').value='';$('ai-err').textContent='';
-  $('ai-status').style.display='none';
-  swCreateTab('manual');
-  openM('m-create');
-}
-
-function swCreateTab(tab){
-  $('tab-manual').classList.toggle('on',tab==='manual');
-  $('tab-ai').classList.toggle('on',tab==='ai');
-  $('panel-manual').style.display=tab==='manual'?'':'none';
-  $('panel-ai').style.display=tab==='ai'?'':'none';
-}
+function openCM(){$('nc-t').value='';$('nc-d').value='';$('nc-h').value='';openM('m-create');}
 
 async function handleAICreate(){
   const prompt=$('ai-prompt').value.trim();
@@ -1568,6 +1543,14 @@ async function restoreV(v){if(!await dsConfirm(`v${v.version} を復元します
 //  AI ASSISTANT
 // ════════════════════════════════════════════
 let aiChatHistory=[];
+
+function toggleAIPanel(){
+  const panel=$('ai-panel');
+  const isHidden=panel.style.display==='none';
+  panel.style.display=isHidden?'flex':'none';
+  const btn=panel.querySelector('button');
+  if(btn)btn.textContent=isHidden?'▼ 閉じる':'▲ 開く';
+}
 
 function openAIAssist(){
   if(!edGID){toast('エディターを開いてからAIを使ってください','e');return;}
