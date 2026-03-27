@@ -591,7 +591,7 @@ textarea.inp{resize:vertical;min-height:50px}
   <div class="ma"><button class="bs bg" onclick="closeM('m-switch')">閉じる</button><button class="bs ba" onclick="switchLogin()">このアカウントで切り替え</button></div>
 </div></div>
 
-<div id="ds-dialog-overlay">
+<div id="ds-dialog-overlay" onclick="if(event.target===this)_closeDialog(null)">
   <div id="ds-dialog-box">
     <div id="ds-dialog-title"></div>
     <div id="ds-dialog-msg"></div>
@@ -693,12 +693,12 @@ function _closeDialog(val){
 // ESCで閉じる
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('ds-dialog-overlay').classList.contains('on'))_closeDialog(null);});
 
-// 使いやすいラッパー
-const dsAlert=(msg,title='お知らせ')=>_showDialog(title,msg,'alert');
-const dsConfirm=(msg,title='確認',opts={})=>_showDialog(title,msg,'confirm',opts);
-const dsPrompt=(msg,title='入力',opts={})=>_showDialog(title,msg,'prompt',opts);
-const dsTextarea=(msg,title='入力',opts={})=>_showDialog(title,msg,'textarea',opts);
-const dsSelect=(msg,title='選択',opts={})=>_showDialog(title,msg,'select',opts);
+// 使いやすいラッパー（function宣言で巻き上げ対応）
+function dsAlert(msg,title='お知らせ'){return _showDialog(title,msg,'alert');}
+function dsConfirm(msg,title='確認',opts={}){return _showDialog(title,msg,'confirm',opts);}
+function dsPrompt(msg,title='入力',opts={}){return _showDialog(title,msg,'prompt',opts);}
+function dsTextarea(msg,title='入力',opts={}){return _showDialog(title,msg,'textarea',opts);}
+function dsSelect(msg,title='選択',opts={}){return _showDialog(title,msg,'select',opts);}
 function openM(id) { $(id).classList.add('on'); if(id==='m-switch')renderSwitchModal(); }
 function closeM(id) { $(id).classList.remove('on'); }
 document.querySelectorAll('.mov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');}));
@@ -1412,33 +1412,7 @@ async function checkGameUrl() {
         repBtn.disabled = alreadyReported;
 
         if(!alreadyReported){
-          repBtn.onclick = async () => {
-            const reasonVal=await dsSelect('通報理由を選んでください','🚩 ゲームを通報',{options:[
-              {value:'不適切なコンテンツ',label:'🔞 不適切なコンテンツ'},
-              {value:'スパム・広告',label:'📢 スパム・広告'},
-              {value:'著作権侵害',label:'⚠️ 著作権侵害'},
-              {value:'有害・危険なコンテンツ',label:'☣️ 有害・危険なコンテンツ'},
-              {value:'その他',label:'📝 その他'}
-            ]});
-            if(!reasonVal)return;
-            const reasonText=reasonVal;
-            try{
-              await sb2.from('game_reports').upsert({
-                id: sess.id+'_'+gid,
-                game_id: gid,
-                game_version: g.published_version||1,
-                reporter_id: sess.id,
-                reason: reasonText
-              },{onConflict:'game_id,reporter_id'});
-              repBtn.textContent='🚩 通報済み';
-              repBtn.disabled=true;
-              repBtn.style.color='#666';
-              repBtn.style.borderColor='#444';
-              repBtn.style.background='#1a1a1a';
-              repBtn.style.cursor='default';
-              await dsAlert('通報しました。管理者が確認します。','通報完了');
-            }catch(e){ await dsAlert('エラー: '+e.message,'エラー'); }
-          };
+          repBtn.onclick = () => showGameReportModal(gid, g, sess.id, repBtn, sb2);
         }
         document.body.appendChild(repBtn);
       }
@@ -1449,6 +1423,73 @@ async function checkGameUrl() {
     await sb2.from('reactions').insert({ game_id: gid, emoji });
   };
   return true;
+}
+
+// 全画面プレイ用 独自通報モーダル（ds-dialogが使えないため）
+function showGameReportModal(gid, g, userId, repBtn, sb2){
+  // 既存のモーダルがあれば削除
+  const existing=document.getElementById('_rep-modal');
+  if(existing)existing.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='_rep-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+  overlay.innerHTML=`
+    <div style="background:#111827;border:1px solid #e94560;border-radius:14px;padding:1.4rem;width:90%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.6)">
+      <div style="font-family:Orbitron,monospace;font-size:.8rem;color:#e94560;font-weight:700;margin-bottom:.7rem">🚩 ゲームを通報</div>
+      <p style="font-size:.82rem;color:#94a3b8;margin-bottom:.8rem;line-height:1.6">通報理由を選んでください</p>
+      <select id="_rep-sel" style="width:100%;padding:.6rem .8rem;background:#1a2235;border:1px solid #2d3a50;border-radius:8px;color:#e2e8f0;font-size:.84rem;margin-bottom:.8rem;outline:none">
+        <option value="不適切なコンテンツ">🔞 不適切なコンテンツ</option>
+        <option value="スパム・広告">📢 スパム・広告</option>
+        <option value="著作権侵害">⚠️ 著作権侵害</option>
+        <option value="有害・危険なコンテンツ">☣️ 有害・危険なコンテンツ</option>
+        <option value="その他">📝 その他</option>
+      </select>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end">
+        <button id="_rep-cancel" style="padding:.5rem 1rem;background:transparent;border:1px solid #2d3a50;border-radius:8px;color:#94a3b8;cursor:pointer;font-size:.82rem">キャンセル</button>
+        <button id="_rep-ok" style="padding:.5rem 1rem;background:#e94560;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:.82rem;font-weight:700">通報する</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('_rep-cancel').onclick=()=>overlay.remove();
+  overlay.onclick=(e)=>{if(e.target===overlay)overlay.remove();};
+  document.getElementById('_rep-ok').onclick=async()=>{
+    const reason=document.getElementById('_rep-sel').value;
+    const okBtn=document.getElementById('_rep-ok');
+    okBtn.disabled=true;okBtn.textContent='送信中...';
+    try{
+      await sb2.from('game_reports').upsert({
+        id:userId+'_'+gid,
+        game_id:gid,
+        game_version:g.published_version||1,
+        reporter_id:userId,
+        reason
+      },{onConflict:'game_id,reporter_id'});
+      overlay.remove();
+      // 完了通知
+      repBtn.textContent='🚩 通報済み';
+      repBtn.disabled=true;
+      repBtn.style.color='#666';
+      repBtn.style.borderColor='#444';
+      repBtn.style.background='#1a1a1a';
+      repBtn.style.cursor='default';
+      // 完了トースト
+      const toast=document.createElement('div');
+      toast.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:.6rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:700;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.4)';
+      toast.textContent='✅ 通報しました';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),3000);
+    }catch(e){
+      okBtn.disabled=false;okBtn.textContent='通報する';
+      const errEl=document.createElement('p');
+      errEl.style.cssText='color:#ef4444;font-size:.75rem;margin-top:.5rem;text-align:center';
+      errEl.textContent='エラー: '+e.message;
+      okBtn.parentElement.insertAdjacentElement('beforebegin',errEl);
+    }
+  };
 }
 
 async function openPlay(gid){
@@ -1999,7 +2040,7 @@ async function admDeleteGame(gid, title, authorName){
   const daysStr=await dsPrompt('異議申し立ての猶予日数','猶予日数設定',{placeholder:'例: 7'});
   const days=parseInt(daysStr);
   if(!days||days<1)return;
-  const deadline=new Date(Date.now()+days*24*3600*10 deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
+  const deadline=new Date(Date.now()+days*24*3600*1000).toISOString();
 
   await sb.from('games').update({
     is_published:false,
