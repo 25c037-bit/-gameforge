@@ -466,7 +466,15 @@ textarea.inp{resize:vertical;min-height:50px}
     <!-- REQUESTS -->
     <div id="p-requests" class="pg">
       <div class="ph"><span class="pt">📩 リクエスト</span></div>
-      <div class="pb" id="rq-b"></div>
+      <div class="pb">
+        <div style="display:flex;gap:.38rem;margin-bottom:.85rem;flex-wrap:wrap" id="rq-tabs">
+          <button class="atab2 on" onclick="swRqTab('recv')">📥 受信</button>
+          <button class="atab2" onclick="swRqTab('sent')">📤 送信</button>
+          <button class="atab2" onclick="swRqTab('browse')">🔍 募集中の人</button>
+          <button class="atab2" onclick="swRqTab('chat')" id="rq-chat-tab" style="display:none">💬 やり取り</button>
+        </div>
+        <div id="rq-b"></div>
+      </div>
     </div>
     <!-- NOTICES -->
     <div id="p-notices" class="pg">
@@ -1763,7 +1771,13 @@ async function loadMsgs(uid2){
 function appendMsg(m,isMe){
   const msgs=$('dmmsgs');const empty=msgs.querySelector('.dmemp');if(empty)empty.remove();
   const row=document.createElement('div');row.className='msgr'+(isMe?' me':'');
-  row.innerHTML=`<div class="msgav">${isMe?(ME.avatar||'🎮'):(curDMPAv||'👤')}</div><div><div class="msgb">${esc(m.text)}</div><div class="msgt">${ft(m.created_at)}</div></div>`;
+  const av=document.createElement('div');av.className='msgav';av.textContent=isMe?(ME.avatar||'🎮'):(curDMPAv||'👤');
+  const body=document.createElement('div');
+  const bubble=document.createElement('div');bubble.className='msgb';bubble.textContent=m.text;
+  const time=document.createElement('div');time.className='msgt';time.textContent=ft(m.created_at);
+  body.appendChild(bubble);body.appendChild(time);
+  if(isMe){row.appendChild(body);row.appendChild(av);}
+  else{row.appendChild(av);row.appendChild(body);}
   msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
 }
 async function sendMsg(){
@@ -1780,33 +1794,179 @@ async function sendMsg(){
 // ════════════════════════════════════════════
 function openRqModal(uid2,name){rqTarget=uid2;$('rq-tn').textContent=`${name} さんへのリクエスト`;$('rq-msg').value='';$('rq-e').textContent='';openM('m-request');}
 async function submitRq(){const msg=$('rq-msg').value.trim();const e=$('rq-e');e.textContent='';if(!msg){e.textContent='メッセージを入力してください';return;}const { error } = await sb.from('requests').insert({from_id:ME.id,to_id:rqTarget,message:msg});if(error){e.textContent=error.message;return;}toast('リクエストを送信しました！','s');closeM('m-request');}
+let rqTab='recv', curRqId=null;
+
+function swRqTab(tab){
+  rqTab=tab;
+  document.querySelectorAll('#rq-tabs .atab2').forEach(b=>b.classList.remove('on'));
+  const idx={'recv':0,'sent':1,'browse':2,'chat':3}[tab]||0;
+  document.querySelectorAll('#rq-tabs .atab2')[idx]?.classList.add('on');
+  loadRQ();
+}
+
 async function loadRQ(){
   const body=$('rq-b');body.innerHTML='<div class="spin"></div>';
-  const [{ data: recv },{ data: sent }] = await Promise.all([
-    sb.from('requests').select('*,from:from_id(username,display_name,avatar)').eq('to_id',ME.id).order('created_at',{ascending:false}),
-    sb.from('requests').select('*,to:to_id(username,display_name)').eq('from_id',ME.id).order('created_at',{ascending:false})
-  ]);
+  if(rqTab==='recv') await loadRQRecv(body);
+  else if(rqTab==='sent') await loadRQSent(body);
+  else if(rqTab==='browse') await loadRQBrowse(body);
+  else if(rqTab==='chat'&&curRqId) await loadRQChat(body,curRqId);
+}
+
+async function loadRQRecv(body){
+  const {data:recv}=await sb.from('requests').select('*,from:from_id(username,display_name,avatar)').eq('to_id',ME.id).order('created_at',{ascending:false});
   body.innerHTML='';
-  body.innerHTML+=`<h3 style="font-size:.82rem;color:var(--tx2);margin-bottom:.6rem">📥 受信したリクエスト</h3>`;
-  if(!recv?.length) body.innerHTML+='<p style="color:var(--tx3);font-size:.82rem;margin-bottom:1rem">リクエストはありません</p>';
-  recv?.forEach(rq=>{
+  if(!recv?.length){body.innerHTML='<div class="empty"><div class="ei">📥</div><div class="et">受信したリクエストはありません</div></div>';return;}
+  recv.forEach(rq=>{
     const stCls=rq.status==='pending'?'rqp':rq.status==='accepted'?'rqa':'rqr';
     const el=document.createElement('div');el.className='rqcard';
-    el.innerHTML=`<div class="rqfrom"><span style="font-size:1.1rem">${rq.from?.avatar||'🎮'}</span><span style="font-weight:700">${esc(rq.from?.display_name||'')}</span><span style="color:var(--tx3);font-size:.72rem;margin-left:auto">${fd(rq.created_at)}</span></div>
-      <div class="rqmsg">${esc(rq.message)}</div>
-      ${rq.status==='pending'?`<div><button class="bs bgn" onclick="updRq('${rq.id}','accepted')">✅ 受け入れる</button> <button class="bs bd2" onclick="updRq('${rq.id}','rejected')">❌ 断る</button></div>`:`<span class="rqst ${stCls}">${rq.status==='accepted'?'✅ 受け入れ済':'❌ お断り'}</span>`}`;
-    body.appendChild(el);
-  });
-  body.innerHTML+=`<h3 style="font-size:.82rem;color:var(--tx2);margin:.9rem 0 .6rem">📤 送ったリクエスト</h3>`;
-  if(!sent?.length) body.innerHTML+='<p style="color:var(--tx3);font-size:.82rem">送ったリクエストはありません</p>';
-  sent?.forEach(rq=>{
-    const stCls=rq.status==='pending'?'rqp':rq.status==='accepted'?'rqa':'rqr';
-    const el=document.createElement('div');el.className='rqcard';
-    el.innerHTML=`<div class="rqfrom"><span style="font-weight:700;color:var(--tx2)">→ ${esc(rq.to?.display_name||'')}</span><span class="rqst ${stCls}" style="margin-left:auto">${rq.status==='pending'?'⏳ 返答待ち':rq.status==='accepted'?'✅ 承認':'❌ お断り'}</span></div><div class="rqmsg">${esc(rq.message)}</div>`;
+    el.innerHTML='<div class="rqfrom"><span style="font-size:1.1rem">'+(rq.from?.avatar||'🎮')+'</span>'
+      +'<span style="font-weight:700">'+esc(rq.from?.display_name||'')+'</span>'
+      +'<span style="color:var(--tx3);font-size:.72rem;margin-left:auto">'+fd(rq.created_at)+'</span></div>'
+      +'<div class="rqmsg">'+esc(rq.message)+'</div>';
+    // ボタン群はDOM操作で追加
+    const btnsDiv=document.createElement('div');btnsDiv.style.cssText='display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center';
+    if(rq.status==='pending'){
+      const b1=document.createElement('button');b1.className='bs bgn';b1.textContent='✅ 受け入れる';b1.onclick=()=>updRq(rq.id,'accepted');btnsDiv.appendChild(b1);
+      const b2=document.createElement('button');b2.className='bs bd2';b2.textContent='❌ 断る';b2.onclick=()=>updRq(rq.id,'rejected');btnsDiv.appendChild(b2);
+    } else {
+      const st=document.createElement('span');st.className='rqst '+stCls;st.textContent=rq.status==='accepted'?'✅ 受け入れ済':'❌ お断り';btnsDiv.appendChild(st);
+    }
+    const bc=document.createElement('button');bc.className='bs bg';bc.style.cssText='font-size:.72rem;margin-left:auto';bc.textContent='💬 やり取り';bc.onclick=()=>openRqChat(rq.id,rq.from_id);btnsDiv.appendChild(bc);
+    el.appendChild(btnsDiv);
     body.appendChild(el);
   });
 }
-async function updRq(id,status){await sb.from('requests').update({status}).eq('id',id);toast(status==='accepted'?'受け入れました':'お断りしました','s');loadRQ();}
+
+async function loadRQSent(body){
+  const {data:sent}=await sb.from('requests').select('*,to:to_id(username,display_name,avatar)').eq('from_id',ME.id).order('created_at',{ascending:false});
+  body.innerHTML='';
+  if(!sent?.length){body.innerHTML='<div class="empty"><div class="ei">📤</div><div class="et">送ったリクエストはありません</div></div>';return;}
+  sent.forEach(rq=>{
+    const stCls=rq.status==='pending'?'rqp':rq.status==='accepted'?'rqa':'rqr';
+    const el=document.createElement('div');el.className='rqcard';
+    el.innerHTML='<div class="rqfrom">'
+      +'<span style="font-size:1.1rem">'+(rq.to?.avatar||'🎮')+'</span>'
+      +'<span style="font-weight:700">'+esc(rq.to?.display_name||'')+'</span>'
+      +'<span class="rqst '+stCls+'" style="margin-left:auto">'+(rq.status==='pending'?'⏳ 返答待ち':rq.status==='accepted'?'✅ 承認':'❌ お断り')+'</span>'
+      +'</div><div class="rqmsg">'+esc(rq.message)+'</div>';
+    const sd=document.createElement('div');sd.style.marginTop='.4rem';
+    const sb2=document.createElement('button');sb2.className='bs bg';sb2.style.fontSize='.72rem';sb2.textContent='💬 やり取り';sb2.onclick=()=>openRqChat(rq.id,rq.to_id);sd.appendChild(sb2);
+    el.appendChild(sd);
+    body.appendChild(el);
+  });
+}
+
+async function loadRQBrowse(body){
+  // フォロー中でリクエスト募集中の人を表示
+  body.innerHTML='<div class="spin"></div>';
+  const {data:fw}=await sb.from('follows').select('following_id').eq('follower_id',ME.id);
+  const fwIds=(fw||[]).map(x=>x.following_id);
+  if(!fwIds.length){body.innerHTML='<div class="empty"><div class="ei">👥</div><div class="et">フォロー中の人がいません</div></div>';return;}
+  const {data:users}=await sb.from('profiles').select('id,display_name,avatar,request_mode,request_desc').in('id',fwIds).eq('request_mode',true);
+  body.innerHTML='';
+  if(!users?.length){body.innerHTML='<div class="empty"><div class="ei">📩</div><div class="et">フォロー中でリクエスト募集中の人はいません</div></div>';return;}
+  users.forEach(u=>{
+    const el=document.createElement('div');el.className='rqcard';
+    el.innerHTML='<div class="rqfrom">'
+      +'<span style="font-size:1.3rem">'+(u.avatar||'🎮')+'</span>'
+      +'<div><div style="font-weight:700">'+esc(u.display_name)+'</div>'
+      +(u.request_desc?'<div style="font-size:.75rem;color:var(--tx3)">'+esc(u.request_desc)+'</div>':'')
+      +'</div>'
+      +'<span id="rqbtn_'+u.id+'"></span>'
+      +'</div>';
+    const rqBtnEl=el.querySelector('#rqbtn_'+u.id);
+    const rqBtn=document.createElement('button');rqBtn.className='bs ba';rqBtn.style.marginLeft='auto';rqBtn.textContent='📩 リクエスト';
+    rqBtn.onclick=()=>openRqModal(u.id,u.display_name);
+    rqBtnEl.appendChild(rqBtn);
+    body.appendChild(el);
+  });
+}
+
+async function openRqChat(rqId, partnerId){
+  curRqId=rqId;
+  // チャットタブを表示
+  const chatTab=$('rq-chat-tab');if(chatTab)chatTab.style.display='';
+  swRqTab('chat');
+}
+
+async function loadRQChat(body, rqId){
+  // リクエスト情報取得
+  const {data:rq}=await sb.from('requests').select('*,from:from_id(display_name,avatar),to:to_id(display_name,avatar)').eq('id',rqId).single();
+  if(!rq){body.innerHTML='<p style="color:var(--red)">リクエストが見つかりません</p>';return;}
+  const partnerId=rq.from_id===ME.id?rq.to_id:rq.from_id;
+  const partner=rq.from_id===ME.id?rq.to:rq.from;
+
+  body.innerHTML='';
+  // ヘッダー
+  const hdr=document.createElement('div');
+  hdr.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:.6rem .8rem;margin-bottom:.6rem';
+  hdr.innerHTML='<div style="font-size:.75rem;color:var(--tx3);margin-bottom:.3rem">📩 リクエスト内容</div>'
+    +'<div style="font-size:.82rem;color:var(--tx2)">'+esc(rq.message)+'</div>';
+  body.appendChild(hdr);
+
+  // チャット履歴
+  const chatArea=document.createElement('div');
+  chatArea.id='rqchat-msgs';
+  chatArea.style.cssText='background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:.7rem;margin-bottom:.6rem;min-height:200px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem';
+  body.appendChild(chatArea);
+
+  // 入力欄
+  const inp=document.createElement('div');
+  inp.style.cssText='display:flex;gap:.4rem';
+  const rqInpEl=document.createElement('input');
+  rqInpEl.id='rqchat-inp';rqInpEl.type='text';rqInpEl.placeholder='メッセージを入力...';
+  rqInpEl.style.cssText='flex:1;padding:.55rem .8rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:20px;color:var(--tx);font-family:var(--fb);font-size:.82rem;outline:none';
+  const rqSendBtn=document.createElement('button');rqSendBtn.className='bs ba';rqSendBtn.textContent='送信';
+  rqSendBtn.onclick=()=>sendRqChat(rqId,partnerId);
+  inp.appendChild(rqInpEl);inp.appendChild(rqSendBtn);
+  body.appendChild(inp);
+
+  // チャット履歴読み込み
+  const {data:msgs}=await sb.from('request_chats').select('*').eq('request_id',rqId).order('created_at',{ascending:true});
+  if(!msgs?.length){
+    const em=document.createElement('div');em.style.cssText='text-align:center;color:var(--tx3);font-size:.8rem;padding:1rem';
+    em.textContent='まだメッセージはありません。最初のメッセージを送ろう！';chatArea.appendChild(em);
+  } else {
+    msgs.forEach(m=>appendRqMsg(m, m.from_id===ME.id));
+  }
+  chatArea.scrollTop=chatArea.scrollHeight;
+
+  // Enterで送信
+  rqInpEl.addEventListener('keydown',e=>{if(e.key==='Enter')sendRqChat(rqId,partnerId);});
+}
+
+function appendRqMsg(m, isMe){
+  const area=$('rqchat-msgs');if(!area)return;
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:.45rem;align-items:flex-end;'+(isMe?'flex-direction:row-reverse':'');
+  const av=document.createElement('div');av.style.cssText='width:26px;height:26px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0';
+  av.textContent=isMe?(ME.avatar||'🎮'):'👤';
+  const wrap=document.createElement('div');wrap.style.cssText='max-width:75%';
+  const bubble=document.createElement('div');
+  bubble.style.cssText='padding:.45rem .7rem;border-radius:10px;font-size:.81rem;line-height:1.55;'+(isMe?'background:var(--a2);color:#fff;border-bottom-right-radius:3px':'background:var(--bg4);border-bottom-left-radius:3px');
+  bubble.textContent=m.text;
+  const time=document.createElement('div');time.style.cssText='font-size:.63rem;color:var(--tx3);margin-top:.15rem;text-align:'+(isMe?'right':'left');
+  time.textContent=ft(m.created_at);
+  wrap.appendChild(bubble);wrap.appendChild(time);
+  row.appendChild(av);row.appendChild(wrap);
+  area.appendChild(row);
+}
+
+async function sendRqChat(rqId, partnerId){
+  const inp=document.getElementById('rqchat-inp');
+  const text=inp?.value.trim();if(!text)return;
+  inp.value='';
+  const msg={id:'rc_'+Date.now(),request_id:rqId,from_id:ME.id,text};
+  appendRqMsg({...msg,created_at:new Date().toISOString()},true);
+  const area=$('rqchat-msgs');if(area)area.scrollTop=area.scrollHeight;
+  await sb.from('request_chats').insert({id:'rc_'+Date.now(),request_id:rqId,from_id:ME.id,text:text});
+}
+
+async function updRq(id,status){
+  await sb.from('requests').update({status}).eq('id',id);
+  toast(status==='accepted'?'受け入れました':'お断りしました','s');
+  loadRQ();
+}
 
 // ════════════════════════════════════════════
 //  TUTORIAL
