@@ -1081,18 +1081,21 @@ async function handleUpload(){
 // ════════════════════════════════════════════
 async function loadMG(){
   const body=$('mg-b');body.innerHTML='<div class="spin"></div>';
-  // 永久削除チェック（期限切れで完全削除）
-  await checkExpiredGames();
   let mgDbQ=sb.from('games').select('id,title,is_published,published_version,plays,updated_at,flagged,flag_reason,hidden_reason,banned_permanently,permanently_deleted,appeal_deadline,appeal_count,edit_unlocked,owner_hidden').eq('author_id',ME.id).order('updated_at',{ascending:false});
   if(mgQ) mgDbQ=mgDbQ.ilike('title','%'+mgQ+'%');
-  const {data:games}=await mgDbQ;
+  // games と appeals を並列取得（高速化）
+  const [{data:games},{data:allAppeals}]=await Promise.all([
+    mgDbQ,
+    sb.from('game_appeals').select('game_id,status,appeal_number,deadline_requested,feedback').eq('author_id',ME.id).order('created_at',{ascending:false})
+  ]);
   body.innerHTML='';
   if(!games?.length){body.innerHTML='<div class="empty"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>';return;}
-  // 各ゲームの異議申し立て情報取得
-  const gameIds=games.map(g=>g.id);
-  const {data:appeals}=await sb.from('game_appeals').select('game_id,status,appeal_number,deadline_requested,feedback').in('game_id',gameIds).order('created_at',{ascending:false});
   const appealMap={};
-  (appeals||[]).forEach(a=>{if(!appealMap[a.game_id])appealMap[a.game_id]=a;});
+  (allAppeals||[]).forEach(a=>{if(!appealMap[a.game_id])appealMap[a.game_id]=a;});
+
+  // 期限切れチェックを非同期で実行（表示をブロックしない）
+  games.filter(g=>g.flagged&&!g.permanently_deleted&&g.appeal_deadline&&new Date(g.appeal_deadline)<new Date())
+    .forEach(g=>sb.from('games').update({permanently_deleted:true,is_published:false}).eq('id',g.id).catch(()=>{}));
 
   games.forEach(g=>{
     if(g.permanently_deleted)return; // 永久削除済みは表示しない
