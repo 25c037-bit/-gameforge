@@ -352,6 +352,7 @@ textarea.inp{resize:vertical;min-height:50px}
       <button class="ni" onclick="openCM()"><span class="ni-i">✨</span><span class="ni-l">新規作成</span></button>
       <button class="ni" data-p="dm" onclick="go('dm')"><span class="ni-i">💬</span><span class="ni-l">DM</span><span class="ni-b" id="dm-b" style="display:none">●</span></button>
       <button class="ni" data-p="requests" onclick="go('requests')"><span class="ni-i">📩</span><span class="ni-l">リクエスト</span><span class="ni-b" id="rq-b" style="display:none">●</span></button>
+      <button class="ni" data-p="tutorial" onclick="go('tutorial')"><span class="ni-i">📚</span><span class="ni-l">チュートリアル</span></button>
       <button class="ni" data-p="notices" onclick="go('notices')"><span class="ni-i">📢</span><span class="ni-l">お知らせ</span></button>
       <button class="ni" data-p="settings" onclick="go('settings')"><span class="ni-i">⚙️</span><span class="ni-l">設定</span></button>
       <button class="ni" id="ni-adm" data-p="admin" onclick="go('admin')" style="display:none"><span class="ni-i">🛡️</span><span class="ni-l">管理パネル</span></button>
@@ -373,6 +374,11 @@ textarea.inp{resize:vertical;min-height:50px}
       <div class="ph"><span class="pt">タイムライン</span><div class="sbar"><input type="text" placeholder="タイトル・作者で検索..." id="tl-s" oninput="dbTL(this.value)"></div><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
       <div class="pb"><div class="grid" id="tl-grid"></div><button class="lmore" id="tl-more" onclick="loadMoreTL()" style="display:none">もっと見る</button></div>
     </div>
+    <!-- TUTORIAL -->
+    <div id="p-tutorial" class="pg">
+      <div class="ph"><span class="pt">📚 チュートリアル</span></div>
+      <div class="pb" id="tut-b"></div>
+    </div>
     <!-- VIDEOS -->
     <div id="p-videos" class="pg">
       <div class="ph"><span class="pt">🎬 動画</span><div class="sbar"><input type="text" placeholder="動画を検索..." id="vs-s" oninput="dbVid(this.value)"></div><button class="bs ba" onclick="openUM()">＋ 動画投稿</button></div>
@@ -380,32 +386,9 @@ textarea.inp{resize:vertical;min-height:50px}
     </div>
     <!-- MY GAMES -->
     <div id="p-my-games" class="pg">
-      <div class="ph"><span class="pt">マイゲーム</span><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
+      <div class="ph"><span class="pt">マイゲーム</span><div class="sbar"><input type="text" placeholder="ゲームを検索..." id="mg-s" oninput="dbMG(this.value)"></div><button class="bs ba" onclick="openCM()">＋ 新規作成</button></div>
       <div class="pb" id="mg-b"></div>
     </div>
-    <!-- AI ASSISTANT -->
-    <div id="p-ai-assist" class="pg">
-      <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
-        <div class="ph" style="flex-shrink:0">
-          <button class="bs bg" onclick="go('editor')">← エディターに戻る</button>
-          <span class="pt" style="margin-left:.5rem">🤖 AIゲームアシスタント</span>
-          <span style="font-size:.72rem;color:var(--tx3);margin-left:.5rem" id="ai-game-title"></span>
-        </div>
-        <div style="flex:1;overflow-y:auto;padding:1rem 1.3rem;display:flex;flex-direction:column;gap:.8rem" id="ai-chat-msgs">
-          <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:.9rem 1rem;font-size:.84rem;color:var(--tx2);line-height:1.7">
-            <div style="font-weight:700;color:var(--accent);margin-bottom:.4rem">🤖 D·STUDIO AIアシスタント</div>
-            作りたいゲームについて何でも聞いてください！<br>
-            「〇〇な機能を追加して」「バグを直して」「もっとかっこよくして」など、自由に話しかけてください。<br>
-            コードを生成したら確認してから反映できます。
-          </div>
-        </div>
-        <div style="padding:.7rem 1rem;border-top:1px solid var(--bd);display:flex;gap:.5rem;flex-shrink:0;background:var(--bg2)">
-          <textarea id="ai-chat-input" placeholder="例: ジャンプ機能を追加して / スコアを表示して / 背景を青くして..." style="flex:1;padding:.6rem .8rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.82rem;outline:none;resize:none;height:60px;line-height:1.5" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMsg();}"></textarea>
-          <button class="bs ba" onclick="sendAIMsg()" style="align-self:flex-end;padding:.6rem 1rem">送信</button>
-        </div>
-      </div>
-    </div>
-
     <!-- EDITOR -->
     <div id="p-editor" class="pg">
       <div class="edl">
@@ -430,24 +413,9 @@ textarea.inp{resize:vertical;min-height:50px}
           <div class="vlist" id="vlist" style="display:none;margin-top:.35rem"></div>
         </div>
       </div>
-      <div class="edr" style="display:flex;flex-direction:column">
+      <div class="edr">
         <div class="pvtb"><span class="pvtitle">▶ PREVIEW</span><span style="flex:1"></span><button class="bs bg" onclick="openGameUrl(edGID)" style="font-size:.68rem">別ページで開く ↗</button></div>
-        <div class="pvwrap" style="flex:1"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
-        <!-- AIアシスタントパネル -->
-        <div id="ai-panel" style="height:280px;display:flex;flex-direction:column;border-top:2px solid var(--a2);flex-shrink:0;background:var(--bg2)">
-          <div style="padding:.4rem .8rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--bd);flex-shrink:0">
-            <span style="font-size:.75rem;font-weight:700;color:var(--a2)">🤖 AIアシスタント</span>
-            <span style="font-size:.68rem;color:var(--tx3)">コードについて何でも聞いてください</span>
-            <button class="bs bg" onclick="toggleAIPanel()" style="font-size:.65rem;margin-left:auto;padding:.2rem .5rem">▼ 閉じる</button>
-          </div>
-          <div id="ai-chat-msgs" style="flex:1;overflow-y:auto;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.5rem">
-            <div style="font-size:.75rem;color:var(--tx3);text-align:center;padding:.5rem">💬 「ジャンプ機能を追加して」「バグを直して」など自由に話しかけてください</div>
-          </div>
-          <div style="padding:.4rem .6rem;border-top:1px solid var(--bd);display:flex;gap:.4rem;flex-shrink:0">
-            <textarea id="ai-chat-input" placeholder="例: スコアを追加して / 背景を変えて..." style="flex:1;padding:.4rem .6rem;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fb);font-size:.78rem;outline:none;resize:none;height:48px;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMsg();}"></textarea>
-            <button class="bs ba" onclick="sendAIMsg()" style="align-self:flex-end;padding:.4rem .7rem;font-size:.76rem">送信</button>
-          </div>
-        </div>
+        <div class="pvwrap"><iframe id="pv-frame" sandbox="allow-scripts allow-same-origin"></iframe><div class="erov hide" id="erov"><div class="ert">⚠ エラー</div><div id="erl"></div></div></div>
       </div>
     </div>
     <!-- PLAY -->
@@ -670,6 +638,8 @@ const ft = s => { if(!s) return ''; const d=new Date(s); return `${d.getHours().
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const dbounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
 const dbTL = dbounce(v => { tlQ=v; tlOff=0; $('tl-grid').innerHTML=''; loadTL(); }, 350);
+let mgQ='';
+const dbMG = dbounce(v => { mgQ=v; loadMG(); }, 300);
 const dbVid = dbounce(v => { vidQ=v; vidOff=0; $('vg').innerHTML=''; loadVids(); }, 350);
 function toast(msg, type='i') { const el=document.createElement('div'); el.className=`toast t${type}`; el.textContent=msg; $('toasts').appendChild(el); setTimeout(()=>el.remove(),3200); }
 
@@ -757,6 +727,7 @@ function go(page, data=null) {
   if(page==='dm') loadDMList();
   if(page==='requests') loadRQ();
   if(page==='notices') loadNotices();
+  if(page==='tutorial') loadTutorial();
   if(page==='settings') loadSettings();
   if(page==='admin') loadAdmin();
   if(page==='editor' && data) openEditor(data);
@@ -989,9 +960,14 @@ const LIMIT = 12;
 async function loadTL() {
   const grid=$('tl-grid');
   if(tlOff===0) grid.innerHTML='<div style="padding:1rem;color:var(--tx3)"><div class="spin"></div></div>';
-  let q = sb.from('games').select(`id,title,description,author_id,author_name,author_avatar,plays,published_version,updated_at,profiles(username,avatar)`)
-    .eq('is_published',true).eq('flagged',false).order('updated_at',{ascending:false}).range(tlOff,tlOff+LIMIT-1);
-  if(tlQ){ const qv=`%${tlQ}%`; q=q.or(`title.ilike.${qv},description.ilike.${qv},author_name.ilike.${qv}`); }
+  // featured優先 → reaction_count降順 → updated_at降順
+  let q = sb.from('games').select('id,title,description,author_id,author_name,author_avatar,plays,published_version,updated_at,featured,reaction_count,owner_hidden')
+    .eq('is_published',true).eq('flagged',false).eq('owner_hidden',false)
+    .order('featured',{ascending:false})
+    .order('reaction_count',{ascending:false})
+    .order('updated_at',{ascending:false})
+    .range(tlOff,tlOff+LIMIT-1);
+  if(tlQ){ const qv='%'+tlQ+'%'; q=q.or('title.ilike.'+qv+',description.ilike.'+qv+',author_name.ilike.'+qv); }
   const { data: games } = await q;
   if(tlOff===0) grid.innerHTML='';
   if(!games?.length && tlOff===0){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>'; return; }
@@ -1008,7 +984,7 @@ function mkCard(g){
   const avHtml=g.author_avatar&&g.author_avatar.startsWith('http')?`<img src="${g.author_avatar}" style="width:100%;height:100%;object-fit:cover">`:g.author_avatar||'🎮';
   el.innerHTML=`<div class="cthumb" onclick="openGameUrl('${g.id}')" style="${g.author_avatar&&g.author_avatar.startsWith('http')?'padding:0;overflow:hidden':''}">${avHtml}</div>
     <div class="cbody" onclick="openGameUrl('${g.id}')">
-      <div class="ctitle">${esc(g.title)}</div>
+      <div class="ctitle">${g.featured?'<span style="font-size:.65rem;background:var(--a3);color:#000;padding:.08rem .35rem;border-radius:4px;margin-right:.3rem;font-weight:700">⭐ おすすめ</span>':''}${esc(g.title)}</div>
       <div class="cdesc">${esc(g.description||'')}</div>
       <div class="cmeta">
         <span class="cauthor" onclick="event.stopPropagation();showProfile('${g.author_id}')">${g.author_avatar||'🎮'} ${esc(g.author_name)}</span>
@@ -1032,6 +1008,9 @@ async function doReact(gid,emoji){
   if(ex?.emoji===emoji){ await sb.from('reactions').delete().eq('game_id',gid).eq('user_id',ME.id); }
   else if(ex){ await sb.from('reactions').update({emoji}).eq('game_id',gid).eq('user_id',ME.id); }
   else{ await sb.from('reactions').insert({game_id:gid,user_id:ME.id,emoji}); }
+  // reaction_count を更新
+  const {data:cnt}=await sb.from('reactions').select('id',{count:'exact',head:true}).eq('game_id',gid);
+  await sb.from('games').update({reaction_count:cnt||0}).eq('id',gid);
   loadReactions(gid);
 }
 
@@ -1096,7 +1075,9 @@ async function loadMG(){
   const body=$('mg-b');body.innerHTML='<div class="spin"></div>';
   // 永久削除チェック（期限切れで完全削除）
   await checkExpiredGames();
-  const {data:games}=await sb.from('games').select('id,title,is_published,published_version,plays,updated_at,flagged,flag_reason,hidden_reason,banned_permanently,permanently_deleted,appeal_deadline,appeal_count,edit_unlocked').eq('author_id',ME.id).order('updated_at',{ascending:false});
+  let mgDbQ=sb.from('games').select('id,title,is_published,published_version,plays,updated_at,flagged,flag_reason,hidden_reason,banned_permanently,permanently_deleted,appeal_deadline,appeal_count,edit_unlocked,owner_hidden').eq('author_id',ME.id).order('updated_at',{ascending:false});
+  if(mgQ) mgDbQ=mgDbQ.ilike('title','%'+mgQ+'%');
+  const {data:games}=await mgDbQ;
   body.innerHTML='';
   if(!games?.length){body.innerHTML='<div class="empty"><div class="ei">🎮</div><div class="et">まだゲームがありません</div><button class="bs ba" onclick="openCM()" style="margin-top:.8rem">最初のゲームを作る</button></div>';return;}
   // 各ゲームの異議申し立て情報取得
@@ -1122,6 +1103,7 @@ async function loadMG(){
     else if(g.flagged&&g.edit_unlocked) badge='<span class="bdg bg-y">✏️ 修正中（要再公開）</span>';
     else if(expired&&g.flagged) badge='<span class="bdg bg-r">⏰ 期限切れ・削除予定</span>';
     else if(g.flagged) badge='<span class="bdg bg-r">🚩 非表示中</span>';
+    else if(g.is_published&&g.owner_hidden) badge='<span class="bdg bg-y">👁 非表示中 v'+(g.published_version||1)+'</span>';
     else if(g.is_published) badge='<span class="bdg bg-g">● 公開中 v'+(g.published_version||1)+'</span>';
     else badge='<span class="bdg bg-x">○ 下書き</span>';
 
@@ -1177,6 +1159,16 @@ async function loadMG(){
     if(!g.banned_permanently&&!expired){
       // プレイ
       const bPl=document.createElement('button');bPl.className='bs bg';bPl.textContent='▶';bPl.onclick=()=>openGameUrl(g.id);btns.appendChild(bPl);
+      // 一時非表示ボタン（公開中のゲームのみ）
+      if(g.is_published&&!g.flagged){
+        const bHide=document.createElement('button');bHide.className='bs bg';bHide.style.fontSize='.72rem';
+        bHide.textContent=g.owner_hidden?'👁 再表示':'👁 非表示';
+        bHide.onclick=async()=>{
+          await sb.from('games').update({owner_hidden:!g.owner_hidden}).eq('id',g.id);
+          toast(g.owner_hidden?'タイムラインに再表示しました':'タイムラインから非表示にしました','s');
+          loadMG();
+        };btns.appendChild(bHide);
+      }
 
       // 編集（edit_unlocked か非表示でない場合）
       if(!g.flagged||g.edit_unlocked){
@@ -1214,101 +1206,13 @@ async function loadMG(){
   });
 }
 
-async function checkExpiredGames(){
-  // 期限切れゲームを永久削除
-  const {data:expired}=await sb.from('games').select('id,title').eq('author_id',ME.id).eq('flagged',true).eq('permanently_deleted',false).lt('appeal_deadline',new Date().toISOString());
-  if(!expired?.length)return;
-  for(const g of expired){
-    await sb.from('games').update({permanently_deleted:true,is_published:false,flagged:true}).eq('id',g.id);
-  }
-}
+
 
 // ════════════════════════════════════════════
 //  CREATE / EDITOR
 // ════════════════════════════════════════════
 function openCM(){$('nc-t').value='';$('nc-d').value='';$('nc-h').value='';openM('m-create');}
 
-async function handleAICreate(){
-  const prompt=$('ai-prompt').value.trim();
-  const useDb=$('ai-db')?.checked||false;
-  const errEl=$('ai-err');errEl.textContent='';
-  if(!prompt){errEl.textContent='ゲームの説明を入力してください';return;}
-
-  const btn=$('btn-ai-gen');btn.disabled=true;btn.textContent='⏳ 生成中...';
-  $('ai-status').style.display='';
-
-  try{
-    // Anthropic APIを呼び出し
-    const systemPrompt=`あなたはゲーム開発AIです。ユーザーの説明に基づいて、ブラウザで動くHTMLゲームを作成してください。
-以下のJSON形式のみで返答してください（他の文章は一切不要）:
-{
-  "title": "ゲームタイトル",
-  "description": "ゲームの説明（1〜2文）",
-  "how_to_play": "遊び方の説明",
-  "html": "HTMLのbody内のコード",
-  "css": "CSSコード",
-  "js": "JavaScriptコード"
-}
-${useDb?'リアルタイムDBを使う場合はJSコード内でGF.set(key,value)/GF.get(key)を使用してください。':''}
-注意:
-- 完全に動作するゲームを作ること
-- HTMLはbodyタグの中身のみ（doctype/html/head/bodyタグ不要）
-- CSSはstyleタグなし、JSはscriptタグなし
-- 日本語でコメントを書く
-- スマホでも遊べるようにする`;
-
-    // Supabase Edge Function経由でAnthropicAPIを呼び出す
-    const res=await fetch(SUPA_URL+'/functions/v1/ai-game-gen',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+SUPA_KEY
-      },
-      body:JSON.stringify({prompt,useDb,systemPrompt})
-    });
-
-    const data=await res.json();
-    if(!res.ok||data.error){errEl.textContent='APIエラー: '+(data.error?.message||data.error||res.status);return;}
-
-    const text=data.content?.find(c=>c.type==='text')?.text||'';
-    // JSONを抽出
-    const jsonMatch=text.match(/\{[\s\S]*\}/);
-    if(!jsonMatch){errEl.textContent='AIの返答を解析できませんでした。もう一度試してください。';return;}
-
-    let gameData;
-    try{ gameData=JSON.parse(jsonMatch[0]); }
-    catch(e){errEl.textContent='JSONの解析に失敗しました: '+e.message;return;}
-
-    // D·STUDIOにゲームを保存
-    const id='g_'+uid();
-    const {error}=await sb.from('games').insert({
-      id,
-      title:gameData.title||'AIが作ったゲーム',
-      description:gameData.description||'',
-      how_to_play:gameData.how_to_play||'',
-      author_id:ME.id,
-      author_name:ME.display_name,
-      author_avatar:ME.avatar||'🎮',
-      html:gameData.html||'',
-      css:gameData.css||'',
-      js:gameData.js||'',
-      lang:'html',
-      use_db:useDb
-    });
-
-    if(error){errEl.textContent='保存エラー: '+error.message;return;}
-
-    closeM('m-create');
-    toast('🤖 AIがゲームを作りました！','s');
-    go('editor',id);
-
-  }catch(e){
-    errEl.textContent='エラー: '+e.message;
-  }finally{
-    btn.disabled=false;btn.textContent='🤖 AIに作ってもらう';
-    $('ai-status').style.display='none';
-  }
-}
 function selLang(el){document.querySelectorAll('.lang-opt').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
 document.addEventListener('DOMContentLoaded',()=>{const cb=document.getElementById('nc-db');if(cb)cb.addEventListener('change',()=>{const d=document.getElementById('db-desc');if(d)d.style.display=cb.checked?'':'none';});});
 
@@ -1538,163 +1442,6 @@ async function confirmDeploy(){
 function toggleVH(){const v=$('vlist');v.style.display=v.style.display==='none'?'':'none';}
 function renderVH(vers){const vl=$('vlist');vl.innerHTML='';if(!vers.length){vl.innerHTML='<div style="font-size:.7rem;color:var(--tx3)">まだ公開履歴がありません</div>';return;}[...vers].reverse().forEach(v=>{const r=document.createElement('div');r.className='vrow';r.innerHTML=`<span class="vnum">v${v.version}</span><span class="vdate">${fd(v.deployedAt)}</span><button class="vrest" onclick='restoreV(${JSON.stringify(v)})'>復元</button>`;vl.appendChild(r);});}
 async function restoreV(v){if(!await dsConfirm(`v${v.version} を復元しますか？現在の内容は上書きされます。`,'バージョン復元',{okLabel:'復元'}))return;edFiles.html={...edFiles.html,content:v.html};edFiles.css={...edFiles.css,content:v.css};edFiles.js={...edFiles.js,content:v.js};if(v.files)Object.entries(v.files).forEach(([k,f])=>edFiles[k]=f);switchTab(activeTab);toast(`v${v.version} を復元しました`,'s');schedSave();}
-
-// ════════════════════════════════════════════
-//  AI ASSISTANT
-// ════════════════════════════════════════════
-let aiChatHistory=[];
-
-function toggleAIPanel(){
-  const panel=$('ai-panel');
-  const isHidden=panel.style.display==='none';
-  panel.style.display=isHidden?'flex':'none';
-  const btn=panel.querySelector('button');
-  if(btn)btn.textContent=isHidden?'▼ 閉じる':'▲ 開く';
-}
-
-function openAIAssist(){
-  if(!edGID){toast('エディターを開いてからAIを使ってください','e');return;}
-  // 現在のコードを保存してからAI画面へ
-  if(activeTab&&editors[activeTab])edFiles[activeTab].content=editors[activeTab].getValue();
-  $('ai-game-title').textContent=($('ed-t').value||'無題のゲーム');
-  aiChatHistory=[];
-  $('ai-chat-msgs').innerHTML=`
-    <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r2);padding:.9rem 1rem;font-size:.84rem;color:var(--tx2);line-height:1.7">
-      <div style="font-weight:700;color:var(--accent);margin-bottom:.4rem">🤖 D·STUDIO AIアシスタント</div>
-      作りたいゲームについて何でも聞いてください！<br>
-      「〇〇な機能を追加して」「バグを直して」「もっとかっこよくして」など、自由に話しかけてください。<br>
-      コードを生成したら確認してから反映できます。
-    </div>`;
-  go('ai-assist');
-}
-
-function addAIMsg(role, content, hasCode=false, codeData=null){
-  const msgs=$('ai-chat-msgs');
-  const div=document.createElement('div');
-  const isAI=role==='assistant';
-  div.style.cssText='display:flex;gap:.6rem;align-items:flex-start;'+(isAI?'':'flex-direction:row-reverse');
-
-  const avatar=document.createElement('div');
-  avatar.style.cssText='width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;background:'+(isAI?'var(--a2)':'var(--bg4)');
-  avatar.textContent=isAI?'🤖':(ME?.avatar||'🎮');
-
-  const bubble=document.createElement('div');
-  bubble.style.cssText='max-width:80%;padding:.65rem .9rem;border-radius:12px;font-size:.82rem;line-height:1.65;'
-    +(isAI?'background:var(--bg3);border:1px solid var(--bd2);':'background:var(--a2);color:#fff;');
-  bubble.textContent=content;
-
-  div.appendChild(avatar);
-  div.appendChild(bubble);
-  msgs.appendChild(div);
-
-  // コードがある場合は反映ボタンを追加
-  if(hasCode&&codeData){
-    const applyDiv=document.createElement('div');
-    applyDiv.style.cssText='margin-left:34px;margin-top:-.4rem;margin-bottom:.4rem';
-    const applyBtn=document.createElement('button');
-    applyBtn.className='bs ba';
-    applyBtn.style.fontSize='.75rem';
-    applyBtn.textContent='✅ このコードをエディターに反映する';
-    applyBtn.onclick=()=>applyAICode(codeData, applyBtn);
-    applyDiv.appendChild(applyBtn);
-    msgs.appendChild(applyDiv);
-  }
-
-  msgs.scrollTop=msgs.scrollHeight;
-}
-
-function applyAICode(codeData, btn){
-  btn.disabled=true;
-  btn.textContent='✅ 反映済み';
-  btn.style.background='var(--green)';
-
-  // エディターにコードを反映
-  if(codeData.html!==undefined&&edFiles.html){edFiles.html.content=codeData.html;if(editors.html)editors.html.setValue(codeData.html);}
-  if(codeData.css!==undefined&&edFiles.css){edFiles.css.content=codeData.css;if(editors.css)editors.css.setValue(codeData.css);}
-  if(codeData.js!==undefined&&edFiles.js){edFiles.js.content=codeData.js;if(editors.js)editors.js.setValue(codeData.js);}
-  if(codeData.title){$('ed-t').value=codeData.title;}
-
-  // 自動保存してプレビュー更新
-  schedSave();
-  toast('✅ コードを反映しました！','s');
-}
-
-async function sendAIMsg(){
-  const inp=$('ai-chat-input');
-  const msg=inp.value.trim();
-  if(!msg)return;
-  inp.value='';
-
-  addAIMsg('user',msg);
-
-  // 現在のコードを取得
-  const currentCode={
-    html:edFiles.html?.content||'',
-    css:edFiles.css?.content||'',
-    js:edFiles.js?.content||''
-  };
-
-  // ローディング表示
-  const msgs=$('ai-chat-msgs');
-  const loading=document.createElement('div');
-  loading.style.cssText='display:flex;gap:.6rem;align-items:center;padding:.5rem 0';
-  loading.innerHTML='<div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;background:var(--a2);flex-shrink:0">🤖</div>'
-    +'<div style="font-size:.8rem;color:var(--tx3)"><span class="spin"></span> AIが考えています...</div>';
-  msgs.appendChild(loading);
-  msgs.scrollTop=msgs.scrollHeight;
-
-  // チャット履歴に追加
-  aiChatHistory.push({role:'user',content:msg});
-
-  try{
-    const systemPrompt='D-STUDIOゲーム開発AIです。'
-      +'現在のコード HTML:'+currentCode.html+' CSS:'+currentCode.css+' JS:'+currentCode.js
-      +' コードを変更する場合はJSON: ```json {"html":"...","css":"...","js":"..."} ``` で返してください。'
-      +' 変更しない質問は日本語で簡潔に回答してください。';
-
-        const res=await fetch(SUPA_URL+'/functions/v1/ai-game-gen',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-      body:JSON.stringify({
-        prompt:msg,
-        systemPrompt,
-        history:aiChatHistory.slice(-10), // 直近10件
-        useDb:false
-      })
-    });
-
-    loading.remove();
-
-    const data=await res.json();
-    if(!res.ok||data.error){
-      addAIMsg('assistant','エラーが発生しました: '+(data.error?.message||data.error||res.status));
-      aiChatHistory.pop();
-      return;
-    }
-
-    const text=data.content?.find(c=>c.type==='text')?.text||'';
-
-    // コードブロックを抽出
-    const jsonMatch=text.match(/```json\s*([\s\S]*?)\s*```/);
-    let codeData=null;
-    let displayText=text.replace(/```json[\s\S]*?```/g,'').trim();
-
-    if(jsonMatch){
-      try{
-        codeData=JSON.parse(jsonMatch[1]);
-        if(!displayText)displayText='コードを生成しました！内容を確認して反映してください。';
-      }catch(e){}
-    }
-
-    aiChatHistory.push({role:'assistant',content:text});
-    addAIMsg('assistant', displayText||text, !!codeData, codeData);
-
-  }catch(e){
-    loading.remove();
-    addAIMsg('assistant','エラー: '+e.message);
-    aiChatHistory.pop();
-  }
-}
 
 // ════════════════════════════════════════════
 //  PLAY
@@ -1981,7 +1728,17 @@ async function loadDMList(){
     list.appendChild(el);
   }
 }
-async function openDMWith(uid2){go('dm');setTimeout(async()=>{const { data: p } = await sb.from('profiles').select('id,display_name,avatar').eq('id',uid2).single();if(p)openDMChat(p.id,p.display_name,p.avatar||'🎮');},200);}
+async function openDMWith(uid2){
+  // 相互フォロー確認
+  const {data:fw1}=await sb.from('follows').select('follower_id').eq('follower_id',ME.id).eq('following_id',uid2).maybeSingle();
+  const {data:fw2}=await sb.from('follows').select('follower_id').eq('follower_id',uid2).eq('following_id',ME.id).maybeSingle();
+  if(!fw1||!fw2){toast('DMは相互フォロー中の相手にのみ送れます','e');return;}
+  go('dm');
+  setTimeout(async()=>{
+    const {data:p}=await sb.from('profiles').select('id,display_name,avatar').eq('id',uid2).single();
+    if(p)openDMChat(p.id,p.display_name,p.avatar||'🎮');
+  },200);
+}
 async function openDMChat(uid2,name,av){
   curDMP=uid2;curDMPAv=av;
   document.querySelectorAll('.dmi').forEach(el=>el.classList.toggle('on',el.querySelector('.dmname')?.textContent===name));
@@ -2050,6 +1807,295 @@ async function loadRQ(){
   });
 }
 async function updRq(id,status){await sb.from('requests').update({status}).eq('id',id);toast(status==='accepted'?'受け入れました':'お断りしました','s');loadRQ();}
+
+// ════════════════════════════════════════════
+//  TUTORIAL
+// ════════════════════════════════════════════
+const TUTORIALS=[
+  {
+    id:'tut1',
+    title:'🌱 はじめてのゲーム',
+    desc:'HTMLの基本を学びながらクリックゲームを作ろう！',
+    level:'超入門',time:'15分',
+    steps:[
+      {
+        title:'HTMLって何？',
+        explain:'HTMLはWebページを作る言語です。タグで囲んで内容を表現します。まずは画面に文字を表示してみましょう！右のプレビューを確認してね。',
+        html:'<div style="text-align:center;padding:40px;font-family:sans-serif">\n  <h1>🎮 はじめてのゲーム</h1>\n  <p>これがHTMLです！タグで囲むと表示されます。</p>\n</div>',
+        css:'body{margin:0;background:#1a1a2e;color:#fff}',
+        js:'// JavaScriptはまだないよ'
+      },
+      {
+        title:'ボタンを作ろう',
+        explain:'buttonタグでボタンが作れます。onclick="関数名()"でクリック時の動作を指定します。押してみてね！',
+        html:'<div style="text-align:center;padding:40px;font-family:sans-serif">\n  <h1>🎮 クリックゲーム</h1>\n  <button onclick="clicked()" style="padding:20px 40px;font-size:24px;cursor:pointer;background:#6c63ff;color:#fff;border:none;border-radius:12px">クリック！</button>\n</div>',
+        css:'body{margin:0;background:#1a1a2e;color:#fff}',
+        js:'function clicked(){\n  alert("クリックした！");\n}'
+      },
+      {
+        title:'スコアを表示しよう',
+        explain:'変数に数値を入れてカウントできます。innerHTML でHTML内の文字を書き換えられます。ボタンを連打してみよう！',
+        html:'<div style="text-align:center;padding:40px;font-family:sans-serif">\n  <h1>🎮 クリックゲーム</h1>\n  <div style="font-size:48px;margin:20px" id="score">0</div>\n  <p style="color:#aaa">点</p>\n  <button onclick="clicked()" style="padding:20px 40px;font-size:24px;cursor:pointer;background:#6c63ff;color:#fff;border:none;border-radius:12px">クリック！</button>\n</div>',
+        css:'body{margin:0;background:#1a1a2e;color:#fff}',
+        js:'let score=0;\nfunction clicked(){\n  score++;\n  document.getElementById("score").innerHTML=score;\n}'
+      },
+      {
+        title:'タイマーを付けよう',
+        explain:'setIntervalで一定時間ごとに処理を実行できます。10秒間でどれだけクリックできるか競うゲームの完成！',
+        html:'<div style="text-align:center;padding:30px;font-family:sans-serif">\n  <h1>🎮 10秒クリックゲーム</h1>\n  <div style="font-size:20px;color:#f59e0b" id="timer">残り: 10秒</div>\n  <div style="font-size:60px;margin:10px" id="score">0</div>\n  <button id="btn" onclick="clicked()" style="padding:20px 40px;font-size:24px;cursor:pointer;background:#6c63ff;color:#fff;border:none;border-radius:12px">クリック！</button>\n  <div id="result" style="font-size:20px;margin-top:20px;color:#10b981"></div>\n</div>',
+        css:'body{margin:0;background:#1a1a2e;color:#fff}',
+        js:'let score=0,time=10,started=false,timer;\nfunction clicked(){\n  if(!started){\n    started=true;\n    timer=setInterval(()=>{\n      time--;\n      document.getElementById("timer").innerHTML="残り: "+time+"秒";\n      if(time<=0){\n        clearInterval(timer);\n        document.getElementById("btn").disabled=true;\n        document.getElementById("result").innerHTML="結果: "+score+"点！";\n      }\n    },1000);\n  }\n  if(time>0){\n    score++;\n    document.getElementById("score").innerHTML=score;\n  }\n}'
+      }
+    ]
+  },
+  {
+    id:'tut2',
+    title:'🎮 キャラクターを動かす',
+    desc:'canvasを使ってキャラクターを動かすゲームを作ろう！',
+    level:'入門',time:'20分',
+    steps:[
+      {
+        title:'canvasって何？',
+        explain:'canvasはJavaScriptで絵を描けるHTMLの要素です。ゲームの画面はほとんどこれで作られています！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #6c63ff;border-radius:8px"></canvas>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\n// 背景\nctx.fillStyle="#0f0f1a";\nctx.fillRect(0,0,400,300);\n// 文字\nctx.fillStyle="#fff";\nctx.font="24px sans-serif";\nctx.fillText("canvasに描いてみた！",60,150);'
+      },
+      {
+        title:'四角を描く',
+        explain:'fillRect(x, y, 幅, 高さ) で四角が描けます。これがキャラクターになります！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #6c63ff;border-radius:8px"></canvas>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nctx.fillStyle="#0f0f1a";\nctx.fillRect(0,0,400,300);\n// キャラクター（青い四角）\nctx.fillStyle="#6c63ff";\nctx.fillRect(180,120,40,40);\n// ラベル\nctx.fillStyle="#fff";\nctx.font="16px sans-serif";\nctx.fillText("これがキャラクター！",120,200);'
+      },
+      {
+        title:'キーボードで動かす',
+        explain:'keydownイベントでキーを検知して、キャラクターのx,y座標を変えます。矢印キーを押してみよう！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #6c63ff;border-radius:8px"></canvas><p style="text-align:center;color:#aaa;font-family:sans-serif">矢印キーで動かす</p>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nlet x=180,y=120;\nfunction draw(){\n  ctx.fillStyle="#0f0f1a";\n  ctx.fillRect(0,0,400,300);\n  ctx.fillStyle="#6c63ff";\n  ctx.fillRect(x,y,40,40);\n}\ndocument.addEventListener("keydown",e=>{\n  if(e.key==="ArrowLeft")x-=10;\n  if(e.key==="ArrowRight")x+=10;\n  if(e.key==="ArrowUp")y-=10;\n  if(e.key==="ArrowDown")y+=10;\n  draw();\n});\ndraw();'
+      },
+      {
+        title:'壁で止まる＆完成！',
+        explain:'if文で画面の端を超えないように制限します。これで基本的なゲームの動きが完成！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #6c63ff;border-radius:8px"></canvas><p style="text-align:center;color:#aaa;font-family:sans-serif">矢印キーで動かす（壁で止まる）</p>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nlet x=180,y=120;\nfunction draw(){\n  ctx.fillStyle="#0f0f1a";\n  ctx.fillRect(0,0,400,300);\n  ctx.fillStyle="#6c63ff";\n  ctx.fillRect(x,y,40,40);\n}\ndocument.addEventListener("keydown",e=>{\n  if(e.key==="ArrowLeft")x=Math.max(0,x-10);\n  if(e.key==="ArrowRight")x=Math.min(360,x+10);\n  if(e.key==="ArrowUp")y=Math.max(0,y-10);\n  if(e.key==="ArrowDown")y=Math.min(260,y+10);\n  draw();\n});\ndraw();'
+      }
+    ]
+  },
+  {
+    id:'tut3',
+    title:'⚡ ちゃんとしたゲーム',
+    desc:'当たり判定・ゲームオーバーを作って本格ゲームに！',
+    level:'中級',time:'25分',
+    steps:[
+      {
+        title:'敵を出す',
+        explain:'setIntervalでゲームループを作り、敵（赤い四角）を自動で動かします！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #e94560;border-radius:8px"></canvas>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nlet px=180,py=230;\nlet ex=100,ey=0,espeed=3;\nfunction draw(){\n  ctx.fillStyle="#0f0f1a";\n  ctx.fillRect(0,0,400,300);\n  // 自機\n  ctx.fillStyle="#6c63ff";\n  ctx.fillRect(px,py,40,30);\n  // 敵\n  ctx.fillStyle="#e94560";\n  ctx.fillRect(ex,ey,30,30);\n  ey+=espeed;\n  if(ey>300){ey=0;ex=Math.random()*370;}\n}\nsetInterval(draw,16);\ndocument.addEventListener("keydown",e=>{\n  if(e.key==="ArrowLeft")px=Math.max(0,px-15);\n  if(e.key==="ArrowRight")px=Math.min(360,px+15);\n});'
+      },
+      {
+        title:'当たり判定',
+        explain:'2つの四角が重なっているかを座標で判定します。ゲームの核心部分です！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #e94560;border-radius:8px"></canvas><p id="msg" style="text-align:center;color:#e94560;font-family:sans-serif;font-size:18px"></p>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nlet px=180,py=230,ex=100,ey=0,alive=true;\nfunction hit(){return px<ex+30&&px+40>ex&&py<ey+30&&py+30>ey;}\nfunction draw(){\n  if(!alive)return;\n  ctx.fillStyle="#0f0f1a";ctx.fillRect(0,0,400,300);\n  ctx.fillStyle="#6c63ff";ctx.fillRect(px,py,40,30);\n  ctx.fillStyle="#e94560";ctx.fillRect(ex,ey,30,30);\n  ey+=3;\n  if(ey>300){ey=0;ex=Math.random()*370;}\n  if(hit()){alive=false;document.getElementById("msg").textContent="ゲームオーバー！";}\n}\nsetInterval(draw,16);\ndocument.addEventListener("keydown",e=>{\n  if(e.key==="ArrowLeft")px=Math.max(0,px-15);\n  if(e.key==="ArrowRight")px=Math.min(360,px+15);\n});'
+      },
+      {
+        title:'スコア＆完成！',
+        explain:'スコアとゲームオーバー画面を付けて完成！矢印キーで避けながらスコアを稼ごう！',
+        html:'<canvas id="c" width="400" height="300" style="display:block;margin:20px auto;border:2px solid #e94560;border-radius:8px"></canvas>',
+        css:'body{margin:0;background:#1a1a2e}',
+        js:'const c=document.getElementById("c");\nconst ctx=c.getContext("2d");\nlet px=180,py=230,ex=100,ey=0,alive=true,score=0;\nfunction hit(){return px<ex+30&&px+40>ex&&py<ey+30&&py+30>ey;}\nfunction draw(){\n  ctx.fillStyle="#0f0f1a";ctx.fillRect(0,0,400,300);\n  if(!alive){\n    ctx.fillStyle="#e94560";ctx.font="bold 32px sans-serif";ctx.fillText("GAME OVER",110,130);\n    ctx.fillStyle="#fff";ctx.font="20px sans-serif";ctx.fillText("スコア: "+score,155,170);\n    return;\n  }\n  ctx.fillStyle="#6c63ff";ctx.fillRect(px,py,40,30);\n  ctx.fillStyle="#e94560";ctx.fillRect(ex,ey,30,30);\n  ctx.fillStyle="#fff";ctx.font="16px sans-serif";ctx.fillText("Score: "+score,10,25);\n  ey+=3+score/50;\n  if(ey>300){ey=0;ex=Math.random()*370;score++;}\n  if(hit()){alive=false;}\n}\nsetInterval(draw,16);\ndocument.addEventListener("keydown",e=>{\n  if(e.key==="ArrowLeft")px=Math.max(0,px-15);\n  if(e.key==="ArrowRight")px=Math.min(360,px+15);\n});'
+      }
+    ]
+  }
+];
+
+let curTutId=null, curStep=0;
+// 進捗をlocalStorageに保存
+function getTutProgress(){try{return JSON.parse(localStorage.getItem('ds_tut')||'{}');}catch(e){return {};}}
+function saveTutProgress(id,step){const p=getTutProgress();p[id]=step;localStorage.setItem('ds_tut',JSON.stringify(p));}
+
+function loadTutorial(){
+  const body=$('tut-b');
+  body.innerHTML='';
+  const progress=getTutProgress();
+
+  // ヘッダー
+  const hdr=document.createElement('div');
+  hdr.style.cssText='margin-bottom:1.2rem';
+  hdr.innerHTML='<div style="font-size:.85rem;color:var(--tx2);margin-bottom:.4rem">コードの書き方を学んで、自分だけのゲームを作ろう！</div>';
+  body.appendChild(hdr);
+
+  // コース一覧
+  TUTORIALS.forEach(tut=>{
+    const done=progress[tut.id]||0;
+    const total=tut.steps.length;
+    const pct=Math.floor(done/total*100);
+    const card=document.createElement('div');
+    card.className='ssec';card.style.cssText='cursor:pointer;margin-bottom:.7rem;transition:.2s';
+    card.onmouseenter=()=>card.style.borderColor='var(--accent)';
+    card.onmouseleave=()=>card.style.borderColor='';
+    card.innerHTML='<div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">'
+      +'<div style="font-size:1.4rem">'+tut.title.split(' ')[0]+'</div>'
+      +'<div style="flex:1"><div style="font-weight:700;font-size:.9rem">'+tut.title.slice(tut.title.indexOf(' ')+1)+'</div>'
+      +'<div style="font-size:.75rem;color:var(--tx3);margin-top:.18rem">'+tut.desc+'</div>'
+      +'<div style="font-size:.7rem;color:var(--tx3);margin-top:.2rem">⏱ '+tut.time+' &nbsp;📊 '+tut.level+'</div></div>'
+      +(pct>0?'<div style="text-align:right"><div style="font-size:.72rem;color:'+(pct>=100?'var(--green)':'var(--accent)')+'">'+( pct>=100?'✅ 完了':'▶ '+pct+'%')+'</div></div>':'')
+      +'</div>'
+      +'<div style="background:var(--bg4);border-radius:4px;height:5px;margin-top:.7rem"><div style="background:'+(pct>=100?'var(--green)':'var(--accent)')+';height:100%;border-radius:4px;width:'+pct+'%;transition:.4s"></div></div>';
+    card.onclick=()=>openTutorial(tut.id);
+    body.appendChild(card);
+  });
+}
+
+function openTutorial(id){
+  const tut=TUTORIALS.find(t=>t.id===id);
+  if(!tut)return;
+  curTutId=id;
+  const progress=getTutProgress();
+  curStep=progress[id]||0;
+  if(curStep>=tut.steps.length)curStep=0;
+  renderTutStep(tut, curStep);
+}
+
+function renderTutStep(tut, stepIdx){
+  const body=$('tut-b');
+  body.innerHTML='';
+  const step=tut.steps[stepIdx];
+  const total=tut.steps.length;
+  const isLast=stepIdx===total-1;
+
+  // 戻るボタン＋タイトル
+  const topRow=document.createElement('div');
+  topRow.style.cssText='display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem;flex-wrap:wrap';
+  topRow.innerHTML='<button class="bs bg" onclick="loadTutorial()" style="font-size:.75rem">← コース一覧</button>'
+    +'<span style="font-weight:700;font-size:.9rem;color:var(--accent)">'+tut.title+'</span>'
+    +'<span style="font-size:.72rem;color:var(--tx3);margin-left:auto">'+( stepIdx+1)+'/'+total+' ステップ</span>';
+  body.appendChild(topRow);
+
+  // プログレスバー
+  const prog=document.createElement('div');
+  prog.style.cssText='background:var(--bg4);border-radius:4px;height:6px;margin-bottom:1rem';
+  prog.innerHTML='<div style="background:var(--accent);height:100%;border-radius:4px;width:'+Math.floor((stepIdx+1)/total*100)+'%;transition:.4s"></div>';
+  body.appendChild(prog);
+
+  // メインコンテンツ（左：説明、右：プレビュー）
+  const main=document.createElement('div');
+  main.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:1rem;height:calc(100vh - 260px);min-height:400px';
+
+  // 左：説明パネル
+  const left=document.createElement('div');
+  left.style.cssText='display:flex;flex-direction:column;gap:.7rem';
+  left.innerHTML='<div class="ssec" style="flex-shrink:0">'
+    +'<div style="font-family:var(--fh);font-size:.8rem;color:var(--accent);margin-bottom:.5rem">STEP '+(stepIdx+1)+': '+step.title+'</div>'
+    +'<div style="font-size:.84rem;color:var(--tx2);line-height:1.75">'+step.explain+'</div>'
+    +'</div>'
+    +'<div class="ssec" style="flex:1;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="font-size:.72rem;color:var(--tx3);margin-bottom:.4rem;font-weight:700">📝 コード（自由に編集できます）</div>'
+    +'<div style="display:flex;gap:.3rem;margin-bottom:.4rem">'
+    +'<button class="bs ba" style="font-size:.68rem" onclick="swTutTab(\'html\')">HTML</button>'
+    +'<button class="bs bg" style="font-size:.68rem" onclick="swTutTab(\'css\')">CSS</button>'
+    +'<button class="bs bg" style="font-size:.68rem" onclick="swTutTab(\'js\')">JS</button>'
+    +'<button class="bs bg" style="font-size:.68rem;margin-left:auto" onclick="refreshTutPV()">⟳ 更新</button>'
+    +'</div>'
+    +'<textarea id="tut-code-html" style="flex:1;width:100%;padding:.6rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fm);font-size:.75rem;resize:none;outline:none;line-height:1.6">'+step.html+'</textarea>'
+    +'<textarea id="tut-code-css" style="display:none;flex:1;width:100%;padding:.6rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fm);font-size:.75rem;resize:none;outline:none;line-height:1.6">'+step.css+'</textarea>'
+    +'<textarea id="tut-code-js" style="display:none;flex:1;width:100%;padding:.6rem;background:var(--bg4);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-family:var(--fm);font-size:.75rem;resize:none;outline:none;line-height:1.6">'+step.js+'</textarea>'
+    +'</div>';
+  main.appendChild(left);
+
+  // 右：プレビュー
+  const right=document.createElement('div');
+  right.style.cssText='display:flex;flex-direction:column;gap:.7rem';
+  right.innerHTML='<div style="font-size:.72rem;color:var(--tx3);font-weight:700">▶ プレビュー</div>'
+    +'<iframe id="tut-pv" style="flex:1;border:1px solid var(--bd2);border-radius:var(--r2);background:#fff" sandbox="allow-scripts allow-same-origin"></iframe>';
+  main.appendChild(right);
+  body.appendChild(main);
+
+  // ボタン行
+  const btnRow=document.createElement('div');
+  btnRow.style.cssText='display:flex;gap:.5rem;margin-top:.9rem;align-items:center';
+
+  if(stepIdx>0){
+    const bPrev=document.createElement('button');bPrev.className='bs bg';bPrev.textContent='← 前へ';
+    bPrev.onclick=()=>renderTutStep(tut,stepIdx-1);btnRow.appendChild(bPrev);
+  }
+  btnRow.appendChild(document.createElement('span')).style.flex='1';
+
+  if(!isLast){
+    const bNext=document.createElement('button');bNext.className='bs ba';bNext.textContent='次のステップへ →';
+    bNext.onclick=()=>{
+      saveTutProgress(curTutId, stepIdx+1);
+      renderTutStep(tut, stepIdx+1);
+    };
+    btnRow.appendChild(bNext);
+  } else {
+    // 最後のステップ → 完了画面
+    const bDone=document.createElement('button');bDone.className='bs bgn';bDone.textContent='✅ コース完了！';
+    bDone.onclick=()=>{
+      saveTutProgress(curTutId, tut.steps.length);
+      showTutComplete(tut);
+    };
+    btnRow.appendChild(bDone);
+  }
+  body.appendChild(btnRow);
+
+  // プレビュー初期表示
+  setTimeout(()=>refreshTutPV(), 100);
+}
+
+function swTutTab(tab){
+  ['html','css','js'].forEach(t=>{
+    const el=$('tut-code-'+t);
+    if(el) el.style.display=t===tab?'':'none';
+  });
+  document.querySelectorAll('#tut-b .bs').forEach((b,i)=>{
+    if(i<3){b.className='bs '+(b.textContent.toLowerCase()===tab?'ba':'bg');}
+  });
+}
+
+function refreshTutPV(){
+  const iframe=$('tut-pv');
+  if(!iframe)return;
+  const html=$('tut-code-html')?.value||'';
+  const css=$('tut-code-css')?.value||'';
+  const js=$('tut-code-js')?.value||'';
+  iframe.srcdoc='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>'+html+'<script>'+js+'<\/script></body></html>';
+}
+
+function showTutComplete(tut){
+  const body=$('tut-b');
+  body.innerHTML='';
+  const isAllDone=TUTORIALS.every(t=>{const p=getTutProgress();return(p[t.id]||0)>=t.steps.length;});
+
+  const card=document.createElement('div');
+  card.style.cssText='text-align:center;padding:3rem 2rem';
+  card.innerHTML='<div style="font-size:4rem;margin-bottom:1rem">🎉</div>'
+    +'<div style="font-family:var(--fh);font-size:1.2rem;color:var(--accent);margin-bottom:.6rem">'+tut.title+' 完了！</div>'
+    +'<div style="font-size:.88rem;color:var(--tx2);line-height:1.8;margin-bottom:1.5rem">おめでとうございます！チュートリアルをクリアしました。<br>作ったゲームはD·STUDIOに投稿できます！</div>'
+    +(isAllDone
+      ?'<div style="background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(124,58,237,.1));border:1px solid var(--accent);border-radius:var(--r2);padding:1.5rem;margin-bottom:1.5rem;text-align:left">'
+        +'<div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:.7rem">🚀 次のステップへ！</div>'
+        +'<div style="font-size:.86rem;color:var(--tx2);line-height:1.9">'
+        +'チュートリアル全部クリアおめでとう！<br>'
+        +'次は <strong style="color:var(--accent)">ChatGPTやGemini などのAI</strong> を使って<br>'
+        +'自分だけのオリジナルゲームを作ってみよう！<br><br>'
+        +'<span style="color:var(--tx3);font-size:.82rem">💡 使い方: AIに「HTMLとJavaScriptで〇〇なゲームを作って」と伝えると<br>'
+        +'コードを書いてくれます。それをD·STUDIOのエディターに<br>'
+        +'コピー&ペーストすれば完成！みんなに公開しよう🎮</span>'
+        +'</div></div>'
+      :'')
+    +'<div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">'
+    +'<button class="bs bg" onclick="loadTutorial()">← コース一覧</button>'
+    +'<button class="bs ba" onclick="openCM()">✨ 新しいゲームを作る</button>'
+    +'</div>';
+  body.appendChild(card);
+}
 
 // ════════════════════════════════════════════
 //  NOTICES
@@ -2164,7 +2210,7 @@ async function loadAdmin(){
     tbl.innerHTML='<thead><tr><th>Av</th><th>ユーザー名</th><th>表示名</th><th>ロール</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead>';
     tbl.appendChild(tbody);c.innerHTML='';c.appendChild(tbl);
   } else if(admTab==='games'){
-    const { data: games } = await sb.from('games').select('*').order('updated_at',{ascending:false});
+    const { data: games } = await sb.from('games').select('id,title,author_id,author_name,is_published,flagged,flag_reason,plays,featured,owner_hidden').order('updated_at',{ascending:false});
     renderAdmGames(games||[],c);
   } else if(admTab==='videos'){
     const { data: vids } = await sb.from('videos').select('*').order('created_at',{ascending:false});
@@ -2213,6 +2259,8 @@ function renderAdmGames(games,container){
     tr.querySelectorAll('span')[0].onclick=()=>showProfile(g.author_id);
     const btnsDiv=document.createElement('div');btnsDiv.style.cssText='display:flex;gap:.28rem;flex-wrap:wrap';
     const bSrc=document.createElement('button');bSrc.className='bs bg';bSrc.style.fontSize='.7rem';bSrc.textContent='💻 コード';bSrc.onclick=()=>admSrc(g.id);btnsDiv.appendChild(bSrc);
+    const bFeat=document.createElement('button');bFeat.className='bs '+(g.featured?'ba':'bg');bFeat.style.fontSize='.7rem';bFeat.textContent=g.featured?'⭐ おすすめ中':'☆ おすすめに';
+    bFeat.onclick=async()=>{await sb.from('games').update({featured:!g.featured}).eq('id',g.id);toast(g.featured?'おすすめを解除':'⭐ おすすめに設定','s');loadAdmin();};btnsDiv.appendChild(bFeat);
     const bWarn=document.createElement('button');bWarn.className='bs bg';bWarn.style.fontSize='.7rem';bWarn.textContent='⚠ 作者に警告';bWarn.onclick=()=>openWarnModal(g.author_id);btnsDiv.appendChild(bWarn);
     if(g.flagged){const bUf=document.createElement('button');bUf.className='bs bgn';bUf.style.fontSize='.7rem';bUf.textContent='✅ 非表示解除';bUf.onclick=()=>admUnflag(g.id);btnsDiv.appendChild(bUf);}
     else{const bF=document.createElement('button');bF.className='bs bd2';bF.style.fontSize='.7rem';bF.textContent='🚫 非表示';bF.onclick=()=>admFlag(g.id);btnsDiv.appendChild(bF);}
